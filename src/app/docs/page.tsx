@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface DocSection {
     title: string;
@@ -113,8 +115,8 @@ export default function DocsPage() {
                                                     <button
                                                         onClick={() => loadDoc(item.file)}
                                                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${selectedDoc === item.file
-                                                                ? 'bg-primary text-white'
-                                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                            ? 'bg-primary text-white'
+                                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                                             }`}
                                                     >
                                                         {item.title}
@@ -168,10 +170,19 @@ export default function DocsPage() {
                                         <p className="mt-4 text-gray-600 dark:text-gray-400">Yükleniyor...</p>
                                     </div>
                                 ) : (
-                                    <div className="prose prose-lg dark:prose-invert max-w-none">
-                                        <pre className="whitespace-pre-wrap font-sans text-gray-800 dark:text-gray-200">
+                                    <div className="prose prose-lg dark:prose-invert max-w-none 
+                                        prose-headings:text-gray-900 dark:prose-headings:text-white
+                                        prose-p:text-gray-700 dark:prose-p:text-gray-300
+                                        prose-strong:text-gray-900 dark:prose-strong:text-white
+                                        prose-code:text-primary prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                                        prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800
+                                        prose-a:text-primary hover:prose-a:text-green-600
+                                        prose-table:border prose-table:border-gray-300 dark:prose-table:border-gray-700
+                                        prose-th:bg-gray-100 dark:prose-th:bg-gray-800
+                                        prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-700">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {docContent}
-                                        </pre>
+                                        </ReactMarkdown>
                                     </div>
                                 )}
                             </div>
