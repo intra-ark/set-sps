@@ -9,55 +9,43 @@ export function isAdmin(session: Session | null): boolean {
 }
 
 /**
- * Check if user can access a specific line
- * Admins can access all lines, regular users only their assigned lines
+ * Check if user can edit a specific line
+ * Admins can edit all lines, regular users only their assigned lines.
  */
 export async function canUserAccessLine(
     userId: number,
     lineId: number,
     userRole: string
 ): Promise<boolean> {
-    // Admins can access all lines
+    // Admins can edit all lines
     if (userRole === 'ADMIN') {
         return true;
     }
-
-    // Check if user has this line assigned
+    // Regular users can edit only assigned lines
     const assignment = await prisma.userLine.findUnique({
         where: {
             userId_lineId: {
                 userId,
-                lineId
-            }
-        }
+                lineId,
+            },
+        },
     });
-
     return assignment !== null;
 }
 
 /**
- * Get all lines accessible by a user
- * Admins get all lines, regular users get only assigned lines
+ * Get all lines accessible (viewable) by a user
+ * All users can view all lines; admins also can edit all.
  */
 export async function getUserLines(userId: number, userRole: string) {
-    if (userRole === 'ADMIN') {
-        // Admins see all lines
-        return await prisma.line.findMany({
-            orderBy: { id: 'asc' }
-        });
-    }
-
-    // Regular users see only assigned lines
-    const assignments = await prisma.userLine.findMany({
-        where: { userId },
-        include: { line: true }
+    // Return all lines for any user
+    return await prisma.line.findMany({
+        orderBy: { id: 'asc' },
     });
-
-    return assignments.map(a => a.line);
 }
 
 /**
- * Get line IDs accessible by a user
+ * Get line IDs accessible by a user (viewable)
  */
 export async function getUserLineIds(userId: number, userRole: string): Promise<number[]> {
     const lines = await getUserLines(userId, userRole);
