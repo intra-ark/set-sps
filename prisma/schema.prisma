@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Line {
-  id             Int       @id @default(autoincrement())
-  name           String    @unique
-  slug           String    @unique
+  id             Int        @id @default(autoincrement())
+  name           String     @unique
+  slug           String     @unique
   headerImageUrl String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   products       Product[]
+  assignedUsers  UserLine[]
 }
 
 model Product {
@@ -49,12 +50,24 @@ model YearData {
 }
 
 model User {
+  id            Int        @id @default(autoincrement())
+  username      String     @unique
+  password      String
+  role          String     @default("USER") // "ADMIN" or "USER"
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  assignedLines UserLine[]
+}
+
+model UserLine {
   id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String
-  role      String   @default("USER") // "ADMIN" or "USER"
+  userId    Int
+  lineId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  line      Line     @relation(fields: [lineId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lineId])
 }
 
 model GlobalSettings {

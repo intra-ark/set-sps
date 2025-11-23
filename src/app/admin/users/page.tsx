@@ -10,6 +10,18 @@ interface User {
     createdAt: string;
 }
 
+interface Line {
+    id: number;
+    name: string;
+    slug: string;
+}
+
+interface UserLine {
+    id: number;
+    lineId: number;
+    line: Line;
+}
+
 export default function UsersPage() {
     const { data: session } = useSession();
     const [users, setUsers] = useState<User[]>([]);
@@ -22,10 +34,18 @@ export default function UsersPage() {
     const [resetUserId, setResetUserId] = useState<number | null>(null);
     const [newPassword, setNewPassword] = useState("");
 
+    // Line Assignment State
+    const [lineAssignModalOpen, setLineAssignModalOpen] = useState(false);
+    const [assignUserId, setAssignUserId] = useState<number | null>(null);
+    const [allLines, setAllLines] = useState<Line[]>([]);
+    const [userLines, setUserLines] = useState<number[]>([]);
+    const [loadingLines, setLoadingLines] = useState(false);
+
     const isAdmin = session?.user?.role === 'ADMIN';
 
     useEffect(() => {
         fetchUsers();
+        fetchAllLines();
     }, []);
 
     const fetchUsers = async () => {
@@ -111,6 +131,66 @@ export default function UsersPage() {
         }
     };
 
+    const fetchAllLines = async () => {
+        try {
+            const res = await fetch('/api/lines');
+            const data = await res.json();
+            setAllLines(data);
+        } catch (error) {
+            console.error('Error fetching lines:', error);
+        }
+    };
+
+    const openLineAssignModal = async (userId: number) => {
+        setAssignUserId(userId);
+        setLoadingLines(true);
+        setLineAssignModalOpen(true);
+
+        try {
+            const res = await fetch(`/api/user-lines?userId=${userId}`);
+            const assignments: UserLine[] = await res.json();
+            setUserLines(assignments.map(a => a.lineId));
+        } catch (error) {
+            console.error('Error fetching user lines:', error);
+            setUserLines([]);
+        } finally {
+            setLoadingLines(false);
+        }
+    };
+
+    const handleToggleLine = (lineId: number) => {
+        setUserLines(prev =>
+            prev.includes(lineId)
+                ? prev.filter(id => id !== lineId)
+                : [...prev, lineId]
+        );
+    };
+
+    const handleSaveLineAssignments = async () => {
+        if (!assignUserId) return;
+
+        try {
+            const res = await fetch('/api/user-lines', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: assignUserId, lineIds: userLines })
+            });
+
+            if (res.ok) {
+                alert('Line assignments updated successfully');
+                setLineAssignModalOpen(false);
+                setAssignUserId(null);
+                setUserLines([]);
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to update line assignments');
+            }
+        } catch (error) {
+            console.error('Error saving line assignments:', error);
+            alert('An error occurred');
+        }
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -174,6 +254,12 @@ export default function UsersPage() {
                                 {isAdmin && (
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                                         <button
+                                            onClick={() => openLineAssignModal(user.id)}
+                                            className="text-primary hover:text-green-700 dark:hover:text-green-400"
+                                        >
+                                            Assign Lines
+                                        </button>
+                                        <button
                                             onClick={() => openResetModal(user.id)}
                                             className="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400"
                                         >
@@ -231,6 +317,63 @@ export default function UsersPage() {
                     </div>
                 )
             }
+
+            {/* Line Assignment Modal */}
+            {lineAssignModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md">
+                        <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Assign Production Lines</h3>
+
+                        {loadingLines ? (
+                            <div className="text-center py-8 text-gray-500">Loading lines...</div>
+                        ) : (
+                            <>
+                                <div className="mb-4 max-h-64 overflow-y-auto">
+                                    {allLines.length === 0 ? (
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm">No production lines available.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {allLines.map(line => (
+                                                <label
+                                                    key={line.id}
+                                                    className="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={userLines.includes(line.id)}
+                                                        onChange={() => handleToggleLine(line.id)}
+                                                        className="mr-3 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                                    />
+                                                    <span className="text-gray-800 dark:text-white font-medium">{line.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex justify-end gap-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setLineAssignModalOpen(false);
+                                            setAssignUserId(null);
+                                            setUserLines([]);
+                                        }}
+                                        className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveLineAssignments}
+                                        className="px-4 py-2 bg-primary hover:bg-green-600 text-white font-bold rounded"
+                                    >
+                                        Save Assignments
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
