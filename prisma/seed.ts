@@ -40,6 +40,33 @@ function parseValue(val: string) {
 }
 
 async function main() {
+  // Create Lines
+  const lines = [
+    { name: 'F400', slug: 'f400', headerImageUrl: '/F400i.png' },
+    { name: 'MC Set', slug: 'mc-set', headerImageUrl: null },
+    { name: 'Okken', slug: 'okken', headerImageUrl: null },
+    { name: 'Line 4', slug: 'line-4', headerImageUrl: null },
+    { name: 'Line 5', slug: 'line-5', headerImageUrl: null },
+    { name: 'Line 6', slug: 'line-6', headerImageUrl: null },
+  ];
+
+  for (const lineData of lines) {
+    await prisma.line.upsert({
+      where: { slug: lineData.slug },
+      update: { headerImageUrl: lineData.headerImageUrl },
+      create: lineData,
+    });
+  }
+
+  const f400Line = await prisma.line.findUnique({ where: { slug: 'f400' } });
+  const mcSetLine = await prisma.line.findUnique({ where: { slug: 'mc-set' } });
+  const okkenLine = await prisma.line.findUnique({ where: { slug: 'okken' } });
+
+  if (!f400Line || !mcSetLine || !okkenLine) {
+    throw new Error('Failed to create lines');
+  }
+
+  // Seed F400 Data (Existing)
   for (const yearStr of Object.keys(ALL_DB)) {
     const year = parseInt(yearStr);
     const products = ALL_DB[yearStr];
@@ -47,11 +74,11 @@ async function main() {
     for (const productName of Object.keys(products)) {
       const data = products[productName];
 
-      // Find or create product
+      // Find or create product linked to F400
       const product = await prisma.product.upsert({
         where: { name: productName },
-        update: {},
-        create: { name: productName },
+        update: { lineId: f400Line.id },
+        create: { name: productName, lineId: f400Line.id },
       });
 
       // Create YearData
@@ -89,8 +116,69 @@ async function main() {
       });
     }
   }
+
+  // Helper to generate random float between min and max
+  const randomFloat = (min: number, max: number) => parseFloat((Math.random() * (max - min) + min).toFixed(2));
+
+  // Helper to generate random SPS data
+  const generateSPSData = () => {
+    const ot = randomFloat(1200, 2500);
+    const dt = randomFloat(ot * 0.6, ot * 0.8);
+    const ut = randomFloat(dt * 0.7, dt * 0.95);
+    const nva = ot - ut; // Simplified logic
+    const kd = ut / ot;
+
+    return {
+      dt,
+      ut,
+      nva,
+      kd,
+      ke: randomFloat(0.6, 0.9),
+      ker: randomFloat(0.65, 0.95),
+      ksr: randomFloat(0.7, 0.9),
+      otr: ot,
+      tsr: Math.floor(randomFloat(100000, 999999)).toString()
+    };
+  };
+
+  // Dynamic Seeding for All Lines
+  const linesToSeed = [
+    { line: mcSetLine, prefix: 'MC', count: 8 },
+    { line: okkenLine, prefix: 'OK', count: 10 },
+    { line: await prisma.line.findUnique({ where: { slug: 'line-4' } }), prefix: 'L4', count: 5 },
+    { line: await prisma.line.findUnique({ where: { slug: 'line-5' } }), prefix: 'L5', count: 6 },
+    { line: await prisma.line.findUnique({ where: { slug: 'line-6' } }), prefix: 'L6', count: 4 },
+  ];
+
+  for (const { line, prefix, count } of linesToSeed) {
+    if (!line) continue;
+
+    for (let i = 1; i <= count; i++) {
+      const productName = `${prefix}-${100 * i} Series`;
+
+      const product = await prisma.product.upsert({
+        where: { name: productName },
+        update: { lineId: line.id },
+        create: { name: productName, lineId: line.id },
+      });
+
+      // Generate data for 2023-2027
+      for (let year = 2023; year <= 2027; year++) {
+        // 80% chance of having data for a year
+        if (Math.random() > 0.2) {
+          const data = generateSPSData();
+          await prisma.yearData.upsert({
+            where: { productId_year: { productId: product.id, year } },
+            update: data,
+            create: { productId: product.id, year, ...data }
+          });
+        }
+      }
+    }
+  }
+
   // Create admin user
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'; // Default only for local dev if env missing
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Manisa.1984'; // Correct password
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
   await prisma.user.upsert({
     where: { username: 'ahmet mersin' },

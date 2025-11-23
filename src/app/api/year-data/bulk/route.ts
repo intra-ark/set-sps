@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { year, data } = body;
+        const { year, data, lineId } = body;
 
         // Validate year
         if (!year || !VALID_YEARS.includes(parseInt(year))) {
@@ -81,12 +81,27 @@ export async function POST(request: Request) {
             };
 
             // Find product by exact name match
-            const product = await prisma.product.findFirst({
+            let product = await prisma.product.findFirst({
                 where: { name: productName }
             });
 
+            // If product doesn't exist and we have a lineId, create it
+            if (!product && lineId) {
+                try {
+                    product = await prisma.product.create({
+                        data: {
+                            name: productName,
+                            lineId: parseInt(lineId)
+                        }
+                    });
+                } catch (createError) {
+                    errors.push(`Row ${i + 1}: Failed to create product "${productName}"`);
+                    continue;
+                }
+            }
+
             if (!product) {
-                errors.push(`Row ${i + 1}: Product "${productName}" not found`);
+                errors.push(`Row ${i + 1}: Product "${productName}" not found and no line specified to create it`);
                 continue;
             }
 

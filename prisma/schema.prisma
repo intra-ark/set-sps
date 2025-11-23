@@ -7,6 +7,16 @@ datasource db {
   url      = env("POSTGRES_PRISMA_URL")
 }
 
+model Line {
+  id             Int       @id @default(autoincrement())
+  name           String    @unique
+  slug           String    @unique
+  headerImageUrl String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       Product[]
+}
+
 model Product {
   id        Int        @id @default(autoincrement())
   name      String     @unique
@@ -14,6 +24,9 @@ model Product {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   yearData  YearData[]
+  
+  lineId    Int?
+  line      Line?      @relation(fields: [lineId], references: [id])
 }
 
 model YearData {

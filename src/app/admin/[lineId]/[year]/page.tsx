@@ -25,8 +25,9 @@ interface Product {
     yearData: YearData[];
 }
 
-export default function YearManagement() {
+export default function LineYearManagement() {
     const params = useParams();
+    const lineId = params.lineId as string;
     const year = parseInt(params.year as string);
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -34,14 +35,15 @@ export default function YearManagement() {
     const [loading, setLoading] = useState(true);
     const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
     const [showAddProduct, setShowAddProduct] = useState(false);
+    const [newProductName, setNewProductName] = useState('');
 
     useEffect(() => {
         fetchProducts();
-    }, []);
+    }, [lineId]);
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch('/api/products');
+            const res = await fetch(`/api/products?lineId=${lineId}`);
             const data = await res.json();
             setAllProducts(data);
             // Filter to show only products that have data for this year
@@ -87,6 +89,32 @@ export default function YearManagement() {
         } catch (error) {
             console.error(error);
             alert('Failed to add product to year');
+        }
+    };
+
+    const handleCreateAndAddProduct = async () => {
+        if (!newProductName.trim()) return;
+
+        try {
+            // 1. Create Product linked to Line
+            const createRes = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newProductName,
+                    lineId: lineId
+                }),
+            });
+
+            if (!createRes.ok) throw new Error('Failed to create product');
+            const newProduct = await createRes.json();
+
+            // 2. Add Year Data
+            await handleAddProductToYear(newProduct.id);
+            setNewProductName('');
+        } catch (error) {
+            console.error(error);
+            alert('Failed to create and add product');
         }
     };
 
@@ -144,7 +172,7 @@ export default function YearManagement() {
         <div className="p-8 max-w-6xl mx-auto">
             <header className="flex justify-between items-center mb-8">
                 <div>
-                    <Link href="/admin" className="text-sm text-gray-500 hover:text-primary mb-2 inline-block">← Back to Dashboard</Link>
+                    <Link href={`/admin/${lineId}`} className="text-sm text-gray-500 hover:text-primary mb-2 inline-block">← Back to Line</Link>
                     <h1 className="text-3xl font-bold text-gray-800 dark:text-white">{year} Data Management</h1>
                 </div>
                 <div className="flex gap-3">
@@ -153,7 +181,7 @@ export default function YearManagement() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center gap-2"
                     >
                         <span className="material-icons-outlined">add</span>
-                        Add Product to {year}
+                        Add Product
                     </button>
                     <label className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center gap-2 cursor-pointer transition">
                         <span className="material-icons-outlined">upload_file</span>
@@ -186,7 +214,7 @@ export default function YearManagement() {
                                 reader.onload = async (event) => {
                                     try {
                                         const text = event.target?.result as string;
-                                        
+
                                         // Security: Check for suspiciously large content
                                         if (text.length > 10 * 1024 * 1024) { // 10MB
                                             alert('File content too large.');
@@ -257,12 +285,12 @@ export default function YearManagement() {
                                                 const res = await fetch('/api/year-data/bulk', {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ year, data })
+                                                    body: JSON.stringify({ year, data, lineId }) // Send lineId
                                                 });
 
                                                 const result = await res.json();
                                                 if (res.ok) {
-                                                    const message = result.errors 
+                                                    const message = result.errors
                                                         ? `Imported ${result.success} rows. ${result.failed} failed:\n${result.errors.join('\n')}`
                                                         : `Successfully imported ${result.success} rows!`;
                                                     alert(message);
@@ -273,7 +301,7 @@ export default function YearManagement() {
                                                 }
                                             } catch (err) {
                                                 console.error('Fetch Error:', err);
-                                              alert('Error during import. Check console for details.');
+                                                alert('Error during import. Check console for details.');
                                             }
                                         } else {
                                             alert('No valid data found in CSV. Check console for details.');
@@ -282,7 +310,6 @@ export default function YearManagement() {
                                         console.error('CSV Parse Error:', parseError);
                                         alert('Failed to parse CSV file. Please check the format.');
                                     }
-
 
                                     // Reset input
                                     e.target.value = '';
@@ -307,7 +334,7 @@ export default function YearManagement() {
                             const url = URL.createObjectURL(blob);
                             const link = document.createElement('a');
                             link.setAttribute('href', url);
-                            link.setAttribute('download', `F400_Data_${year}.csv`);
+                            link.setAttribute('download', `Line_${lineId}_Data_${year}.csv`);
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -315,7 +342,7 @@ export default function YearManagement() {
                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center gap-2"
                     >
                         <span className="material-icons-outlined">download</span>
-                        Export CSV (Excel)
+                        Export CSV
                     </button>
                 </div>
             </header>
@@ -325,7 +352,30 @@ export default function YearManagement() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
                         <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Add Product to {year}</h2>
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
+
+                        {/* Create New Product */}
+                        <div className="mb-6 border-b pb-6 border-gray-200 dark:border-gray-700">
+                            <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">Create New Product</h3>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newProductName}
+                                    onChange={(e) => setNewProductName(e.target.value)}
+                                    placeholder="New Product Name"
+                                    className="flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <button
+                                    onClick={handleCreateAndAddProduct}
+                                    disabled={!newProductName.trim()}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 rounded-lg disabled:opacity-50"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+
+                        <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">Or Select Existing Product</h3>
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
                             {allProducts
                                 .filter(p => !p.yearData.some(d => d.year === year))
                                 .map(product => (
@@ -337,6 +387,9 @@ export default function YearManagement() {
                                         {product.name}
                                     </button>
                                 ))}
+                            {allProducts.filter(p => !p.yearData.some(d => d.year === year)).length === 0 && (
+                                <p className="text-gray-500 text-center py-4">No other existing products found.</p>
+                            )}
                         </div>
                         <button
                             onClick={() => setShowAddProduct(false)}

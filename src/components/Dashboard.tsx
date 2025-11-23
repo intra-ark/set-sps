@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import WaterfallChart from './WaterfallChart';
 import AIAssistant from './AIAssistant';
+import LineDrawer from './LineDrawer';
 
 interface YearData {
     id: number;
@@ -22,10 +23,24 @@ interface Product {
     id: number;
     name: string;
     image: string | null;
+    lineId: number;
     yearData: YearData[];
 }
 
+interface Line {
+    id: number;
+    name: string;
+    slug: string;
+    headerImageUrl: string | null;
+}
+
+interface StarProduct {
+    name: string;
+    kd: number;
+}
+
 export default function Dashboard() {
+
     const [products, setProducts] = useState<Product[]>([]);
     const [selectedProducts, setSelectedProducts] = useState<{ [key: string]: string }>({
         '2023': '',
@@ -39,33 +54,68 @@ export default function Dashboard() {
     const [headerImage, setHeaderImage] = useState('/schneider_f400_diagram.png');
     const [selectedChartYear, setSelectedChartYear] = useState('2025');
 
+    // Multi-line support
+    const [lines, setLines] = useState<Line[]>([]);
+    const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
     useEffect(() => {
-        fetch('/api/settings')
+        // Fetch lines
+        fetch('/api/lines')
             .then(res => res.json())
-            .then(data => {
-                if (data.headerImageUrl) setHeaderImage(data.headerImageUrl);
-            });
-
-        fetch('/api/products')
-            .then(res => res.json())
-            .then((data: Product[]) => {
-                setProducts(data);
-
-                const defaults: { [key: string]: string } = {};
-
-                // 2023: Prefer 'NL GL6-1250A', otherwise first available
-                const p2023 = data.find(p => p.name === 'NL GL6-1250A') || data.find(p => p.yearData.some(d => d.year === 2023));
-                if (p2023) defaults['2023'] = p2023.id.toString();
-
-                // 2024-2027: First available
-                [2024, 2025, 2026, 2027].forEach(year => {
-                    const p = data.find(p => p.yearData.some(d => d.year === year));
-                    if (p) defaults[year.toString()] = p.id.toString();
-                });
-
-                setSelectedProducts(prev => ({ ...prev, ...defaults }));
+            .then((data: Line[]) => {
+                setLines(data);
+                // Default to Global Dashboard (-1)
+                handleLineSelect(-1);
             });
     }, []);
+
+    const handleLineSelect = (lineId: number) => {
+        setSelectedLineId(lineId);
+
+        if (lineId === -1) {
+            // Global Dashboard
+            setHeaderImage('/schneider_f400_diagram.png'); // Default or specific global image
+            fetch('/api/products')
+                .then(res => res.json())
+                .then((data: Product[]) => {
+                    setProducts(data);
+                    // For global view, we might want to show summary cards instead of product details
+                    // But for now, let's just reset selected products to avoid confusion
+                    setSelectedProducts({});
+                });
+        } else {
+            const line = lines.find(l => l.id === lineId);
+            if (line) {
+                setHeaderImage(line.headerImageUrl || '/schneider_f400_diagram.png');
+            }
+
+            // Fetch products for selected line
+            fetch(`/api/products?lineId=${lineId}`)
+                .then(res => res.json())
+                .then((data: Product[]) => {
+                    setProducts(data);
+
+                    const defaults: { [key: string]: string } = {};
+
+                    // 2023: Prefer 'NL GL6-1250A', otherwise first available
+                    const p2023 = data.find(p => p.name === 'NL GL6-1250A') || data.find(p => p.yearData.some(d => d.year === 2023));
+                    if (p2023) defaults['2023'] = p2023.id.toString();
+
+                    // 2024-2027: First available
+                    [2024, 2025, 2026, 2027].forEach(year => {
+                        const p = data.find(p => p.yearData.some(d => d.year === year));
+                        if (p) defaults[year.toString()] = p.id.toString();
+                    });
+
+                    setSelectedProducts(prev => ({ ...prev, ...defaults }));
+                });
+        }
+    };
+
+    // ... (rest of component)
+
+
 
     const handleProductChange = (year: string, productId: string) => {
         setSelectedProducts(prev => ({ ...prev, [year]: productId }));
@@ -96,17 +146,31 @@ export default function Dashboard() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto" id="app">
+            <LineDrawer
+                isOpen={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                lines={lines}
+                selectedLineId={selectedLineId}
+                onSelectLine={handleLineSelect}
+            />
+
             {/* HEADER */}
             <header className="flex justify-between items-center mb-6">
-                <div className="flex-1">
-                    <h2 className="text-3xl font-bold text-primary">Schneider</h2>
-                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">Electric</p>
+                <div className="flex-1 flex items-center gap-4">
+                    <div>
+                        <h2 className="text-3xl font-bold text-primary">Schneider</h2>
+                        <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">Electric</p>
+                    </div>
+                    <div className="text-3xl font-light text-gray-400">|</div>
+                    <h2 className="text-3xl font-bold text-primary">SET SPS</h2>
                 </div>
                 <div className="flex-1 text-center">
-                    <h1 className="text-xl sm:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-wide">F400 MANUFACTURING TIME DEFINITION</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-wide">
+                        {lines.find(l => l.id === selectedLineId)?.name.toUpperCase() || 'MANUFACTURING'} TIME DEFINITION
+                    </h1>
                 </div>
                 <div className="flex-1 flex justify-end gap-3">
-                    <button onClick={() => window.location.href = "mailto:ahmet.mersin@se.com?subject=F400%20Yardım%20İsteği"}
+                    <button onClick={() => window.location.href = "mailto:ahmet.mersin@se.com?subject=SET%20SPS%20Yardım%20İsteği"}
                         className="bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 text-sm flex items-center gap-1">
                         <span className="material-icons-outlined text-base">help</span>
                         <span>Yardım</span>
@@ -115,150 +179,299 @@ export default function Dashboard() {
                         className="bg-primary hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-300">
                         <span>Hazırlayan</span>
                     </button>
-                    {/* Link to Admin Panel */}
-                    <a href="/admin"
-                        className="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-300 flex items-center">
-                        <span>Admin</span>
-                    </a>
+                    {/* Menu Button */}
+                    <button onClick={() => setDrawerOpen(true)}
+                        className="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 flex items-center gap-2">
+                        <span className="material-icons-outlined">menu</span>
+                        <span>Menu</span>
+                    </button>
                 </div>
             </header>
 
-            {/* 1. BÜYÜK GÖRSEL ALANI */}
-            <div className="relative mb-8 rounded-lg liquid-glass shadow-xl p-4 border border-white/80 w-full lg:w-8/12 mx-auto">
-                <div className="image-placeholder-inner rounded-lg overflow-hidden flex justify-center items-center">
-                    <img src={headerImage}
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/2816x1536/F5F5F5/3DCD58?text=CUBICLE+MODEL+VISUALISATION'; }}
-                        alt="F400 Technical Diagram Placeholder" className="w-full h-full object-cover p-0" />
-                </div>
-            </div>
+            {selectedLineId === -1 ? (
+                <div className="space-y-8 animate-fade-in">
+                    {/* Global Stats Section */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* 1. Global Waterfall Chart */}
+                        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-blue-600"></div>
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                                <span className="material-icons-outlined text-primary">bar_chart</span>
+                                Global SPS Analysis (Average)
+                            </h3>
+                            <div className="h-64">
+                                {(() => {
+                                    // Calculate global averages based on latest year data for each product
+                                    let totalOT = 0, totalDT = 0, totalUT = 0, totalNVA = 0;
+                                    let count = 0;
 
-            {/* 2. VERİ PANELLERİ */}
-            <main className="liquid-glass rounded-lg border border-white/80 shadow-xl overflow-hidden p-0">
-                <div className="scroll-container">
-                    <div className="flex">
+                                    products.forEach(p => {
+                                        if (p.yearData.length > 0) {
+                                            // Get latest year data
+                                            const latest = [...p.yearData].sort((a, b) => b.year - a.year)[0];
+                                            if (latest.otr && latest.dt && latest.ut && latest.nva) {
+                                                totalOT += latest.otr;
+                                                totalDT += latest.dt;
+                                                totalUT += latest.ut;
+                                                totalNVA += latest.nva;
+                                                count++;
+                                            }
+                                        }
+                                    });
 
-                        {/* 2.1. SABİT ETİKET SÜTUNU */}
-                        <div className="sticky-labels hidden lg:flex w-48 flex-col justify-end space-y-2 py-4 px-3">
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Cubicle Types:</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Design Time (DT):</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Useful Time (UT):</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Non-Value Added:</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KD (%):</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KE:</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KER:</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KSR:</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">OT:</div>
-                            <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">TSR:</div>
+                                    if (count === 0) return <div className="h-full flex items-center justify-center text-gray-400">No Data Available</div>;
+
+                                    return (
+                                        <WaterfallChart
+                                            ot={totalOT / count}
+                                            dt={totalDT / count}
+                                            ut={totalUT / count}
+                                            nva={totalNVA / count}
+                                        />
+                                    );
+                                })()}
+                            </div>
                         </div>
 
-                        {/* 2.2. YILLIK VERİ PANELLERİ */}
-                        {['2023', '2024', '2025', '2026', '2027'].map(year => {
-                            const data = getProductData(year);
-                            return (
-                                <div key={year} className="data-panel p-4 border-r border-border-light">
-                                    <h4 className="text-lg font-bold text-center mb-3">{year}</h4>
-                                    <div className="space-y-2">
-                                        <select
-                                            value={selectedProducts[year] || ''}
-                                            onChange={(e) => handleProductChange(year, e.target.value)}
-                                            className="product-select w-full bg-primary/10 border-primary/20 text-center rounded-lg h-10 flex items-center justify-center font-semibold text-text-primary-light p-2 transition text-sm"
-                                        >
-                                            <option value="" disabled>Ürün Seçiniz...</option>
-                                            {products.filter(p => p.yearData.some(d => d.year === parseInt(year))).map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
+                        {/* 2. Key Metrics Cards */}
+                        <div className="space-y-6">
+                            {/* Total Products Card */}
+                            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden">
+                                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-blue-100 font-medium">Total Products</h4>
+                                        <span className="material-icons-outlined text-blue-200 bg-white/10 p-2 rounded-lg">inventory_2</span>
+                                    </div>
+                                    <div className="text-4xl font-bold mb-2">{products.length}</div>
+                                    <div className="text-sm text-blue-200">Across {lines.length} Production Lines</div>
+                                </div>
+                            </div>
 
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">Design Time (DT):</span>
-                                            <span className="data-value">{formatNumber(data?.dt ?? null)}</span>
+                            {/* Average KD Card */}
+                            <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden">
+                                <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-emerald-100 font-medium">Average Efficiency (KD)</h4>
+                                        <span className="material-icons-outlined text-emerald-200 bg-white/10 p-2 rounded-lg">trending_up</span>
+                                    </div>
+                                    <div className="text-4xl font-bold mb-2">
+                                        {(() => {
+                                            let totalKD = 0;
+                                            let count = 0;
+                                            products.forEach(p => {
+                                                const latest = [...p.yearData].sort((a, b) => b.year - a.year)[0];
+                                                if (latest && latest.kd) {
+                                                    totalKD += latest.kd;
+                                                    count++;
+                                                }
+                                            });
+                                            return count > 0 ? `${((totalKD / count) * 100).toFixed(1)}%` : 'N/A';
+                                        })()}
+                                    </div>
+                                    <div className="text-sm text-emerald-200">Global Performance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Line Cards Grid */}
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mt-8 mb-4 border-l-4 border-primary pl-3">Production Lines</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {lines.map(line => {
+                            const lineProducts = products.filter(p => p.lineId === line.id);
+                            const totalProducts = lineProducts.length;
+
+                            // Find Star Product (Best KD)
+                            let starProduct: StarProduct | null = null;
+
+                            lineProducts.forEach(p => {
+                                const latest = [...p.yearData].sort((a, b) => b.year - a.year)[0];
+                                if (latest && latest.kd) {
+                                    if (!starProduct || latest.kd > starProduct.kd) {
+                                        starProduct = { name: p.name, kd: latest.kd };
+                                    }
+                                }
+                            });
+
+                            // Extract to const for proper type narrowing
+                            const bestProduct = starProduct;
+
+                            return (
+                                <div key={line.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group" onClick={() => handleLineSelect(line.id)}>
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-4 flex-wrap">
+                                                <h3 className="text-xl font-bold text-gray-800 dark:text-white group-hover:text-primary transition-colors">{line.name}</h3>
+                                                {bestProduct && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold border border-yellow-200 dark:border-yellow-700/50 animate-fade-in ml-2" title={`Best Performance: ${((bestProduct as StarProduct).kd * 100).toFixed(1)}%`}>
+                                                        <span className="material-icons-outlined text-[14px]">star</span>
+                                                        <span className="truncate max-w-[100px]">{(bestProduct as StarProduct).name}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Production Line</div>
                                         </div>
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">Useful Time (UT):</span>
-                                            <span className="data-value">{formatNumber(data?.ut ?? null)}</span>
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 ml-2">
+                                            <span className="material-icons-outlined">factory</span>
                                         </div>
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">Non-Value Added:</span>
-                                            <span className="data-value">{formatNumber(data?.nva ?? null)}</span>
+                                    </div>
+
+                                    <div className="flex justify-between items-end mt-2">
+                                        <div>
+                                            <span className="text-3xl font-bold text-gray-800 dark:text-white">{totalProducts}</span>
+                                            <span className="text-xs text-gray-500 ml-1 uppercase font-semibold">Products</span>
                                         </div>
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">KD (%):</span>
-                                            <span className="data-value text-primary">{formatPercent(data?.kd ?? null)}</span>
-                                        </div>
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">KE:</span>
-                                            <span className="data-value">{formatPercent(data?.ke ?? null)}</span>
-                                        </div>
-                                        <div className="flex items-center h-10 justify-end lg:justify-start">
-                                            <span className="lg:hidden mr-2">KER:</span>
-                                            <span className="w-1/4 text-center hidden lg:inline">%</span>
-                                            <input className="ker-input ker-red" type="text" readOnly value={formatPercentInput(data?.ker ?? null)} />
-                                        </div>
-                                        <div className="flex items-center h-10 justify-end lg:justify-start">
-                                            <span className="lg:hidden mr-2">KSR:</span>
-                                            <span className="w-1/4 text-center hidden lg:inline">%</span>
-                                            <input className="ker-input bg-white/50 dark:bg-black/20 border-border-light text-center" type="text" readOnly value={formatPercentInput(data?.ksr ?? null)} />
-                                        </div>
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">OT:</span>
-                                            <span className="data-value">{formatNumber(data?.otr ?? null)}</span>
-                                        </div>
-                                        <div className="bg-white/50 dark:bg-black/20 data-row">
-                                            <span className="lg:hidden">TSR:</span>
-                                            <span className="data-value text-red-500 font-mono">{data?.tsr || '#DIV/0!'}</span>
-                                        </div>
+                                        <span className="text-primary text-sm font-medium flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                            View Details <span className="material-icons-outlined text-sm">arrow_forward</span>
+                                        </span>
                                     </div>
                                 </div>
                             );
                         })}
-
                     </div>
                 </div>
-            </main>
-
-            {/* 3. SPS WATERFALL ANALYSIS SECTION */}
-            <section className="mt-8 liquid-glass rounded-lg border border-white/80 shadow-xl p-6">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <span className="material-icons-outlined text-primary">bar_chart</span>
-                        SPS Time Analysis (Waterfall)
-                    </h3>
-
-                    {/* Year Tabs */}
-                    <div className="flex p-1 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                        {['2023', '2024', '2025', '2026', '2027'].map(year => (
-                            <button
-                                key={year}
-                                onClick={() => setSelectedChartYear(year)}
-                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${selectedChartYear === year
-                                    ? 'bg-white dark:bg-gray-600 text-primary shadow-sm'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                                    }`}
-                            >
-                                {year}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="bg-white/40 dark:bg-black/20 rounded-xl p-6 border border-white/50 min-h-[400px]">
-                    <div className="flex justify-between items-center mb-6">
-                        <h4 className="font-bold text-2xl text-gray-700 dark:text-gray-200">{selectedChartYear} Analysis</h4>
-                        <span className="text-sm font-mono text-gray-500 bg-white/50 px-3 py-1 rounded border border-white/50">
-                            Product: <span className="font-bold text-gray-800">{products.find(p => p.id.toString() === selectedProducts[selectedChartYear])?.name || 'No Product Selected'}</span>
-                        </span>
+            ) : (
+                <>
+                    {/* 1. BÜYÜK GÖRSEL ALANI */}
+                    <div className="relative mb-8 rounded-lg liquid-glass shadow-xl p-4 border border-white/80 w-full lg:w-8/12 mx-auto">
+                        <div className="image-placeholder-inner rounded-lg overflow-hidden flex justify-center items-center">
+                            <img src={headerImage}
+                                onError={(e) => { e.currentTarget.src = 'https://placehold.co/2816x1536/F5F5F5/3DCD58?text=CUBICLE+MODEL+VISUALISATION'; }}
+                                alt="Technical Diagram" className="w-full h-full object-cover p-0" />
+                        </div>
                     </div>
 
-                    <div className="h-[400px]">
-                        <WaterfallChart
-                            ot={getProductData(selectedChartYear)?.otr ?? null}
-                            dt={getProductData(selectedChartYear)?.dt ?? null}
-                            ut={getProductData(selectedChartYear)?.ut ?? null}
-                            nva={getProductData(selectedChartYear)?.nva ?? null}
-                        />
-                    </div>
-                </div>
-            </section>
+                    {/* 2. VERİ PANELLERİ */}
+                    <main className="liquid-glass rounded-lg border border-white/80 shadow-xl overflow-hidden p-0">
+                        <div className="scroll-container">
+                            <div className="flex">
+
+                                {/* 2.1. SABİT ETİKET SÜTUNU */}
+                                <div className="sticky-labels hidden lg:flex w-48 flex-col justify-end space-y-2 py-4 px-3">
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Cubicle Types:</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Design Time (DT):</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Useful Time (UT):</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">Non-Value Added:</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KD (%):</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KE:</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KER:</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">KSR:</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">OT:</div>
+                                    <div className="text-right font-medium h-10 flex items-center justify-end pr-2 text-text-secondary-light">TSR:</div>
+                                </div>
+
+                                {/* 2.2. YILLIK VERİ PANELLERİ */}
+                                {['2023', '2024', '2025', '2026', '2027'].map(year => {
+                                    const data = getProductData(year);
+                                    return (
+                                        <div key={year} className="data-panel p-4 border-r border-border-light">
+                                            <h4 className="text-lg font-bold text-center mb-3">{year}</h4>
+                                            <div className="space-y-2">
+                                                <select
+                                                    value={selectedProducts[year] || ''}
+                                                    onChange={(e) => handleProductChange(year, e.target.value)}
+                                                    className="product-select w-full bg-primary/10 border-primary/20 text-center rounded-lg h-10 flex items-center justify-center font-semibold text-text-primary-light p-2 transition text-sm"
+                                                >
+                                                    <option value="" disabled>Ürün Seçiniz...</option>
+                                                    {products.filter(p => p.yearData.some(d => d.year === parseInt(year))).map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                                    ))}
+                                                </select>
+
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">Design Time (DT):</span>
+                                                    <span className="data-value">{formatNumber(data?.dt ?? null)}</span>
+                                                </div>
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">Useful Time (UT):</span>
+                                                    <span className="data-value">{formatNumber(data?.ut ?? null)}</span>
+                                                </div>
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">Non-Value Added:</span>
+                                                    <span className="data-value">{formatNumber(data?.nva ?? null)}</span>
+                                                </div>
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">KD (%):</span>
+                                                    <span className="data-value text-primary">{formatPercent(data?.kd ?? null)}</span>
+                                                </div>
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">KE:</span>
+                                                    <span className="data-value">{formatPercent(data?.ke ?? null)}</span>
+                                                </div>
+                                                <div className="flex items-center h-10 justify-end lg:justify-start">
+                                                    <span className="lg:hidden mr-2">KER:</span>
+                                                    <span className="w-1/4 text-center hidden lg:inline">%</span>
+                                                    <input className="ker-input ker-red" type="text" readOnly value={formatPercentInput(data?.ker ?? null)} />
+                                                </div>
+                                                <div className="flex items-center h-10 justify-end lg:justify-start">
+                                                    <span className="lg:hidden mr-2">KSR:</span>
+                                                    <span className="w-1/4 text-center hidden lg:inline">%</span>
+                                                    <input className="ker-input bg-white/50 dark:bg-black/20 border-border-light text-center" type="text" readOnly value={formatPercentInput(data?.ksr ?? null)} />
+                                                </div>
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">OT:</span>
+                                                    <span className="data-value">{formatNumber(data?.otr ?? null)}</span>
+                                                </div>
+                                                <div className="bg-white/50 dark:bg-black/20 data-row">
+                                                    <span className="lg:hidden">TSR:</span>
+                                                    <span className="data-value text-red-500 font-mono">{data?.tsr || '#DIV/0!'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* 3. SPS WATERFALL ANALYSIS SECTION */}
+                    <section className="mt-8 liquid-glass rounded-lg border border-white/80 shadow-xl p-6">
+                        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                <span className="material-icons-outlined text-primary">bar_chart</span>
+                                SPS Time Analysis (Waterfall)
+                            </h3>
+
+                            {/* Year Tabs */}
+                            <div className="flex p-1 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                                {['2023', '2024', '2025', '2026', '2027'].map(year => (
+                                    <button
+                                        key={year}
+                                        onClick={() => setSelectedChartYear(year)}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${selectedChartYear === year
+                                            ? 'bg-white dark:bg-gray-600 text-primary shadow-sm'
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                            }`}
+                                    >
+                                        {year}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-white/40 dark:bg-black/20 rounded-xl p-6 border border-white/50 min-h-[400px]">
+                            <div className="flex justify-between items-center mb-6">
+                                <h4 className="font-bold text-2xl text-gray-700 dark:text-gray-200">{selectedChartYear} Analysis</h4>
+                                <span className="text-sm font-mono text-gray-500 bg-white/50 px-3 py-1 rounded border border-white/50">
+                                    Product: <span className="font-bold text-gray-800">{products.find(p => p.id.toString() === selectedProducts[selectedChartYear])?.name || 'No Product Selected'}</span>
+                                </span>
+                            </div>
+
+                            <div className="h-[400px]">
+                                <WaterfallChart
+                                    ot={getProductData(selectedChartYear)?.otr ?? null}
+                                    dt={getProductData(selectedChartYear)?.dt ?? null}
+                                    ut={getProductData(selectedChartYear)?.ut ?? null}
+                                    nva={getProductData(selectedChartYear)?.nva ?? null}
+                                />
+                            </div>
+                        </div>
+                    </section>
+                </>
+            )}
 
             {/* Popup Modal */}
             <div className={`modal fixed inset-0 z-50 flex items-center justify-center p-4 ${modalOpen ? 'active' : ''}`}>

@@ -17,7 +17,7 @@ export default function AdminLayout({
                             <div className="flex">
                                 <div className="flex-shrink-0 flex items-center">
                                     <Link href="/admin" className="text-xl font-bold text-primary">
-                                        F400 Admin
+                                        SET SPS Admin
                                     </Link>
                                 </div>
                                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

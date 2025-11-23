@@ -7,12 +7,16 @@ interface Message {
     content: string;
 }
 
-export default function AIAssistant() {
+interface AIAssistantProps {
+    selectedLineId?: number;
+}
+
+export default function AIAssistant({ selectedLineId }: AIAssistantProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: 'Merhaba! Ben Intra Arc, Ahmet Mersin tarafından geliştirilmiş ileri seviye düşünce sistemiyim. Ürünleriniz, SPS analizi veya sistem özellikleri hakkında her şeyi sorabilirsiniz. 🚀'
+            content: 'Merhaba! Ben Intra Arc, Ahmet Mersin tarafından geliştirilmiş ileri seviye düşünce sistemiyim. SET SPS, ürünleriniz veya analizler hakkında her şeyi sorabilirsiniz. 🚀'
         }
     ]);
     const [input, setInput] = useState('');
@@ -48,7 +52,8 @@ export default function AIAssistant() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: input,
-                    history: messages.slice(1)
+                    history: messages.slice(1),
+                    lineId: selectedLineId
                 })
             });
 

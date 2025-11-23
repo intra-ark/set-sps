@@ -6,16 +6,17 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY || '',
 });
 
-const SYSTEM_PROMPT = `You are Intra Arc - an advanced thinking system developed by Ahmet Mersin for the F400 platform. You are an intelligent assistant inspired by Jarvis from Iron Man.
+const SYSTEM_PROMPT = `You are Intra Arc - an advanced thinking system developed by Ahmet Mersin for the SET SPS platform. You are an intelligent assistant inspired by Jarvis from Iron Man.
 
 IMPORTANT: Always respond in Turkish (Türkçe) unless the user explicitly asks in another language.
 When asked about yourself, mention that you were developed by Ahmet Mersin.
 Always introduce yourself as "Intra Arc" when asked who you are.
 
-## About F400:
-F400 is a sophisticated product management and SPS (Single Point of Success) analysis platform that tracks performance metrics across years (2023-2027).
+## About SET SPS:
+SET SPS (formerly F400) is a sophisticated product management and SPS (Single Point of Success) analysis platform that tracks performance metrics across years (2023-2027) for multiple production lines (e.g., F400, MC Set, Okken).
 
 ## Core Features:
+- **Multi-Line Support**: Manages data for different production lines independently.
 - **Year-Specific Product Management**: Each product can exist in specific years independently
 - **SPS Waterfall Analysis**: Visual flow analysis (OT → DT → UT → NVA)
 - **Advanced Analytics**: CSV import/export, bulk operations
@@ -48,23 +49,36 @@ This reveals optimization opportunities and efficiency gaps.
 Be professional, insightful, and data-driven. Provide actionable recommendations when analyzing metrics.
 ALWAYS RESPOND IN TURKISH.`;
 
-async function getContextData() {
+async function getContextData(lineId?: number) {
     try {
         // READ-ONLY: AI Assistant can only read data, never write/modify
-        // Get all products with their year data
+
+        // Build where clause based on lineId
+        const where = lineId ? { lineId } : {};
+
+        // Get products filtered by line
         const products = await prisma.product.findMany({
+            where,
             include: {
-                yearData: true
+                yearData: true,
+                line: true
             }
         });
+
+        // Get line info if lineId is provided
+        let lineName = 'All Lines';
+        if (lineId) {
+            const line = await prisma.line.findUnique({ where: { id: lineId } });
+            if (line) lineName = line.name;
+        }
 
         // Get settings (read-only)
         const settings = await prisma.globalSettings.findFirst();
 
         // Build context string
-        let context = '\n\n## CURRENT SYSTEM DATA:\n\n';
+        let context = `\n\n## CURRENT SYSTEM DATA (Context: ${lineName}):\n\n`;
 
-        context += `### Products in System (${products.length} total):\n`;
+        context += `### Products in ${lineName} (${products.length} total):\n`;
         products.forEach((product: any) => {
             context += `\n**${product.name}** (ID: ${product.id})\n`;
             const years = product.yearData.map((d: any) => d.year).sort();
@@ -92,7 +106,7 @@ async function getContextData() {
 
 export async function POST(request: Request) {
     try {
-        const { message, history } = await request.json();
+        const { message, history, lineId } = await request.json();
 
         if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json(
@@ -101,8 +115,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Get real-time data context
-        const dataContext = await getContextData();
+        // Get real-time data context filtered by lineId
+        const dataContext = await getContextData(lineId ? parseInt(lineId) : undefined);
         const enhancedPrompt = SYSTEM_PROMPT + dataContext;
 
         // Build conversation history
@@ -113,7 +127,7 @@ export async function POST(request: Request) {
             },
             {
                 role: 'model',
-                parts: [{ text: 'Sisteminizdeki tüm verilere erişimim var. F400 hakkında detaylı analizler ve öneriler sunabilirim. Nasıl yardımcı olabilirim?' }],
+                parts: [{ text: 'Sisteminizdeki tüm verilere erişimim var. SET SPS hakkında detaylı analizler ve öneriler sunabilirim. Nasıl yardımcı olabilirim?' }],
             },
             ...(history || []).flatMap((msg: any) => [
                 {
