@@ -41,6 +41,18 @@ export default function UsersPage() {
     const [userLines, setUserLines] = useState<number[]>([]);
     const [loadingLines, setLoadingLines] = useState(false);
 
+    // Toast Notification State
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+    const showToastNotification = (message: string, type: 'success' | 'error' = 'success') => {
+        setToastMessage(message);
+        setToastType(type);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000); // 3 seconds
+    };
+
     const isAdmin = session?.user?.role === 'ADMIN';
 
     useEffect(() => {
@@ -178,18 +190,18 @@ export default function UsersPage() {
             });
 
             if (res.ok) {
-                alert('Line assignments updated successfully');
+                showToastNotification('Line assignments updated successfully!', 'success');
                 setLineAssignModalOpen(false);
                 setAssignUserId(null);
                 setUserLines([]);
             } else {
                 const err = await res.json();
                 console.error('API Error:', err);
-                alert(`Failed to assign lines: ${err.error || 'Unknown error'}`);
+                showToastNotification(`Failed: ${err.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             console.error('Error saving line assignments:', error);
-            alert(`An error occurred: ${error}`);
+            showToastNotification(`Error: ${error}`, 'error');
         }
     };
 
@@ -375,6 +387,21 @@ export default function UsersPage() {
                                 </div>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Notification */}
+            {showToast && (
+                <div className="fixed bottom-8 right-8 z-50 animate-fade-in">
+                    <div className={`px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 ${toastType === 'success'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-red-500 text-white'
+                        }`}>
+                        <span className="material-icons-outlined">
+                            {toastType === 'success' ? 'check_circle' : 'error'}
+                        </span>
+                        <span className="font-semibold">{toastMessage}</span>
                     </div>
                 </div>
             )}
