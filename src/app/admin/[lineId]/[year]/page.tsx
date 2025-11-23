@@ -237,8 +237,8 @@ export default function LineYearManagement() {
                                             const line = lines[i].trim();
                                             if (!line) continue;
 
-                                            // Simple CSV split (assuming no commas in values for now as per export)
-                                            const cols = line.split(',');
+                                            // Simple CSV split (using semicolon for Excel compatibility)
+                                            const cols = line.split(';');
 
                                             if (cols.length < 10) {
                                                 console.warn('Skipping line due to insufficient columns:', cols);
@@ -327,10 +327,11 @@ export default function LineYearManagement() {
                                 return [
                                     p.name,
                                     d?.dt ?? '', d?.ut ?? '', d?.nva ?? '', d?.kd ?? '', d?.ke ?? '', d?.ker ?? '', d?.ksr ?? '', d?.otr ?? '', d?.tsr ?? ''
-                                ].join(',');
+                                ].join(';');
                             });
-                            const csvContent = [headers.join(','), ...rows].join('\n');
-                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const csvContent = [headers.join(';'), ...rows].join('\n');
+                            // Add BOM for Excel UTF-8 compatibility
+                            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                             const url = URL.createObjectURL(blob);
                             const link = document.createElement('a');
                             link.setAttribute('href', url);

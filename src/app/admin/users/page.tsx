@@ -17,6 +17,11 @@ export default function UsersPage() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(true);
 
+    // Password Reset State
+    const [resetModalOpen, setResetModalOpen] = useState(false);
+    const [resetUserId, setResetUserId] = useState<number | null>(null);
+    const [newPassword, setNewPassword] = useState("");
+
     const isAdmin = (session?.user as any)?.role === 'ADMIN';
 
     useEffect(() => {
@@ -71,6 +76,38 @@ export default function UsersPage() {
             }
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const openResetModal = (id: number) => {
+        setResetUserId(id);
+        setNewPassword("");
+        setResetModalOpen(true);
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!resetUserId) return;
+
+        try {
+            const res = await fetch('/api/users', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: resetUserId, password: newPassword }),
+            });
+
+            if (res.ok) {
+                alert("Password updated successfully");
+                setResetModalOpen(false);
+                setResetUserId(null);
+                setNewPassword("");
+            } else {
+                const err = await res.json();
+                alert(err.error || "Failed to update password");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("An error occurred");
         }
     };
 
@@ -135,7 +172,13 @@ export default function UsersPage() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</td>
                                 {isAdmin && (
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                                        <button
+                                            onClick={() => openResetModal(user.id)}
+                                            className="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400"
+                                        >
+                                            Change Password
+                                        </button>
                                         <button
                                             onClick={() => handleDeleteUser(user.id)}
                                             className="text-red-600 hover:text-red-900 dark:hover:text-red-400"
@@ -149,6 +192,45 @@ export default function UsersPage() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Password Reset Modal */}
+            {
+                resetModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md">
+                            <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Reset Password</h3>
+                            <form onSubmit={handleResetPassword}>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">New Password</label>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setResetModalOpen(false)}
+                                        className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded"
+                                    >
+                                        Update Password
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
         </div>
     );
 }
