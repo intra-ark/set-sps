@@ -110,7 +110,7 @@ export default function AIAssistant({ selectedLineId }: AIAssistantProps) {
 
             {/* Premium Chat Window */}
             {isOpen && (
-                <div className="fixed bottom-8 right-8 z-50 w-[420px] h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 border border-cyan-500/30">
+                <div className="fixed bottom-0 right-0 md:bottom-8 md:right-8 z-50 w-full md:w-[420px] h-[100dvh] md:h-[600px] rounded-none md:rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 border-t md:border border-cyan-500/30">
                     {/* Jarvis-Style Header */}
                     <div className="relative p-5 border-b border-cyan-500/30">
                         {/* Animated background */}

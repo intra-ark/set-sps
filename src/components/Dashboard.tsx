@@ -145,45 +145,46 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto" id="app">
+        <div className="p-2 sm:p-4 lg:p-8 max-w-[1800px] mx-auto" id="app">
             <LineDrawer
                 isOpen={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
                 lines={lines}
                 selectedLineId={selectedLineId}
                 onSelectLine={handleLineSelect}
+                onOpenAuthorModal={() => setModalOpen(true)}
             />
 
             {/* HEADER */}
-            <header className="flex justify-between items-center mb-6">
-                <div className="flex-1 flex items-center gap-4">
+            <header className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 md:gap-0">
+                <div className="flex-1 flex items-center gap-4 w-full md:w-auto justify-center md:justify-start">
                     <div>
-                        <h2 className="text-3xl font-bold text-primary">Schneider</h2>
-                        <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">Electric</p>
+                        <h2 className="text-2xl md:text-3xl font-bold text-primary">Schneider</h2>
+                        <p className="text-xs md:text-sm text-text-secondary-light dark:text-text-secondary-dark">Electric</p>
                     </div>
-                    <div className="text-3xl font-light text-gray-400">|</div>
-                    <h2 className="text-3xl font-bold text-primary">SET SPS</h2>
+                    <div className="text-2xl md:text-3xl font-light text-gray-400">|</div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-primary">SET SPS</h2>
                 </div>
-                <div className="flex-1 text-center">
-                    <h1 className="text-xl sm:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-wide">
+                <div className="flex-1 text-center w-full md:w-auto order-3 md:order-2">
+                    <h1 className="text-lg sm:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-wide">
                         {lines.find(l => l.id === selectedLineId)?.name.toUpperCase() || 'MANUFACTURING'} TIME DEFINITION
                     </h1>
                 </div>
-                <div className="flex-1 flex justify-end gap-3">
+                <div className="flex-1 flex justify-end gap-3 w-full md:w-auto order-2 md:order-3 absolute top-4 right-4 md:static">
                     <button onClick={() => window.location.href = "mailto:ahmet.mersin@se.com?subject=SET%20SPS%20Yardım%20İsteği"}
-                        className="bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 text-sm flex items-center gap-1">
+                        className="hidden md:flex bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 text-sm items-center gap-1">
                         <span className="material-icons-outlined text-base">help</span>
                         <span>Yardım</span>
                     </button>
                     <button onClick={() => setModalOpen(true)}
-                        className="bg-primary hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        className="hidden md:flex bg-primary hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-300">
                         <span>Hazırlayan</span>
                     </button>
                     {/* Menu Button */}
                     <button onClick={() => setDrawerOpen(true)}
                         className="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 flex items-center gap-2">
                         <span className="material-icons-outlined">menu</span>
-                        <span>Menu</span>
+                        <span className="hidden sm:inline">Menu</span>
                     </button>
                 </div>
             </header>
@@ -335,7 +336,7 @@ export default function Dashboard() {
             ) : (
                 <>
                     {/* 1. BÜYÜK GÖRSEL ALANI */}
-                    <div className="relative mb-8 rounded-lg liquid-glass shadow-xl p-4 border border-white/80 w-full lg:w-8/12 mx-auto">
+                    <div className="relative mb-4 md:mb-8 rounded-lg liquid-glass shadow-xl p-2 md:p-4 border border-white/80 w-full lg:w-8/12 mx-auto">
                         <div className="image-placeholder-inner rounded-lg overflow-hidden flex justify-center items-center">
                             <img src={headerImage}
                                 onError={(e) => { e.currentTarget.src = 'https://placehold.co/2816x1536/F5F5F5/3DCD58?text=CUBICLE+MODEL+VISUALISATION'; }}
@@ -428,15 +429,15 @@ export default function Dashboard() {
                     </main>
 
                     {/* 3. SPS WATERFALL ANALYSIS SECTION */}
-                    <section className="mt-8 liquid-glass rounded-lg border border-white/80 shadow-xl p-6">
+                    <section className="mt-8 liquid-glass rounded-lg border border-white/80 shadow-xl p-4 md:p-6">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                                 <span className="material-icons-outlined text-primary">bar_chart</span>
                                 SPS Time Analysis (Waterfall)
                             </h3>
 
                             {/* Year Tabs */}
-                            <div className="flex p-1 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                            <div className="flex p-1 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-x-auto max-w-full">
                                 {['2023', '2024', '2025', '2026', '2027'].map(year => (
                                     <button
                                         key={year}

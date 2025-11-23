@@ -24,7 +24,7 @@ const WaterfallChart: React.FC<WaterfallChartProps> = ({ ot, dt, ut, nva }) => {
     return (
         <div className="w-full h-full p-4 bg-white/50 dark:bg-black/20 rounded-lg flex flex-col">
             <h5 className="text-xs font-bold text-center mb-4 text-gray-600 dark:text-gray-300 uppercase tracking-wider">SPS Time Analysis</h5>
-            <div className="flex-1 flex items-end justify-between gap-1 text-[10px] font-mono relative">
+            <div className="flex-1 flex items-end justify-between gap-1 text-[10px] sm:text-xs font-mono relative">
 
                 {/* 1. OT Bar */}
                 {ot && (
@@ -60,7 +60,7 @@ const WaterfallChart: React.FC<WaterfallChartProps> = ({ ot, dt, ut, nva }) => {
                     <div className="w-1/5 flex flex-col items-center group relative h-full justify-end">
                         <span className="mb-1 absolute text-red-600 font-bold" style={{ bottom: `calc(${getHeight(ut)} + ${getHeight(loss2)} + 4px)` }}>-{fmt(loss2)}</span>
                         <div style={{ height: getHeight(loss2), marginBottom: getHeight(ut) }} className="w-full bg-red-500 rounded-sm relative hover:bg-red-600 transition-colors">
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/90 font-bold text-[8px]">NVA</div>
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/90 font-bold text-[8px] sm:text-[10px]">NVA</div>
                         </div>
                     </div>
                 )}

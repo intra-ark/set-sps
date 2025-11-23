@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* Remove default Next.js variables to prevent conflicts */
-:root {}
+
 
 body {
   background-image:
@@ -109,10 +109,30 @@ body {
   .scroll-container {
     display: block;
     width: 100%;
+    overflow-x: visible;
+    /* Allow vertical stacking without scroll */
   }
 
   .scroll-container>.flex {
     display: flex;
+    flex-direction: column;
+    /* Stack vertically on mobile */
+    gap: 1rem;
+    /* Add spacing between years */
+  }
+
+  .data-panel {
+    min-width: 100%;
+    /* Full width on mobile */
+    border-right: none;
+    /* Remove border */
+    border-bottom: 1px solid #e5e7eb;
+    /* Add bottom border separator */
+    padding-bottom: 1.5rem;
+  }
+
+  .data-panel:last-child {
+    border-bottom: none;
   }
 }
 

@@ -17,9 +17,10 @@ interface LineDrawerProps {
     lines: Line[];
     selectedLineId: number | null;
     onSelectLine: (lineId: number) => void;
+    onOpenAuthorModal?: () => void;
 }
 
-export default function LineDrawer({ isOpen, onClose, lines, selectedLineId, onSelectLine }: LineDrawerProps) {
+export default function LineDrawer({ isOpen, onClose, lines, selectedLineId, onSelectLine, onOpenAuthorModal }: LineDrawerProps) {
     const { data: session } = useSession();
     const isAdmin = (session?.user as any)?.role === 'ADMIN';
 
@@ -81,6 +82,34 @@ export default function LineDrawer({ isOpen, onClose, lines, selectedLineId, onS
                     </div>
 
                     <div className="mt-auto space-y-4">
+                        {/* Mobile Only Menu Items */}
+                        <div className="md:hidden space-y-2 border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <button
+                                onClick={() => {
+                                    window.location.href = "mailto:ahmet.mersin@se.com?subject=SET%20SPS%20Yardım%20İsteği";
+                                    onClose();
+                                }}
+                                className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center gap-3 transition-colors"
+                            >
+                                <span className="material-icons-outlined text-primary">help</span>
+                                <span className="font-medium">Yardım</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // We need to trigger the modal from the parent or pass a handler
+                                    // For now, let's just show an alert or similar, BUT ideally we should pass a prop
+                                    // Since we can't easily pass a prop without changing the interface in a way that affects Dashboard,
+                                    // let's assume we can pass a new prop 'onOpenAuthorModal'
+                                    // Wait, I can just add it to the props.
+                                    onClose();
+                                    if (onOpenAuthorModal) onOpenAuthorModal();
+                                }}
+                                className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center gap-3 transition-colors"
+                            >
+                                <span className="material-icons-outlined text-primary">person</span>
+                                <span className="font-medium">Hazırlayan</span>
+                            </button>
+                        </div>
                         {/* Admin Link */}
                         {isAdmin && (
                             <Link
