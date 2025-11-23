@@ -61,7 +61,7 @@ export default function DocsPage() {
         setSelectedDoc(file);
 
         try {
-            const response = await fetch(`/docs/${file}.md`);
+            const response = await fetch(`/api/docs?file=${file}`);
             const text = await response.text();
             setDocContent(text);
         } catch (error) {
