@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'File parameter required' }, { status: 400 });
         }
 
-        // Security: only allow .md files and prevent directory traversal
-        if (!file.endsWith('.md') || file.includes('..')) {
+        // Security: prevent directory traversal
+        if (file.includes('..') || file.includes('/')) {
             return NextResponse.json({ error: 'Invalid file' }, { status: 400 });
         }
 
