@@ -1,6 +1,6 @@
-# F400 - İleri Seviye Ürün Yönetimi & SPS Analiz Platformu
+# SET SPS - İleri Seviye Ürün Yönetimi & SPS Analiz Platformu
 
-F400, ürün performans metriklerini yıllar (2023-2027) bazında takip eden ve SPS (Single Point of Success) analizi yapan gelişmiş bir yönetim platformudur.
+SET SPS, ürün performans metriklerini yıllar (2023-2027) bazında takip eden ve SPS (Single Point of Success) analizi yapan gelişmiş bir yönetim platformudur.
 
 ## 🌟 Özellikler
 
@@ -279,4 +279,4 @@ Sorularınız için:
 
 ---
 
-**F400** - *İleri seviye ürün yönetimi, akıllı analiz* 🚀
+**SET SPS** - *İleri seviye ürün yönetimi, akıllı analiz* 🚀
