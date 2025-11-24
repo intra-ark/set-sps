@@ -1,106 +1,139 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-/* eslint-disable @typescript-eslint/no-require-imports */
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const db2023 = {
-    "NL AD6-1250A": { dt: "1.519,13", ut: "1.359,65", nva: "159,48", kd: "0,895", ke: "0,673", ker: "0,723", otr: "2100,31", tsr: "290382,902", ksr: "0,723" },
-    "NL AD6-2500A": { dt: "1.384,64", ut: "1.244,38", nva: "140,25", kd: "0,898", ke: "0,673", ker: "0,723", otr: "1914,37", tsr: "290382,902", ksr: "0,723" },
-    "NL CL6-1250A": { dt: "1.328,46", ut: "1.199,44", nva: "129,02", kd: "0,902", ke: "0,673", ker: "0,723", otr: "1836,69", tsr: "290382,902", ksr: "0,723" },
-    "NL GL6-1250A": { dt: "1.292,90", ut: "1.171,16", nva: "121,74", kd: "0,905", ke: "0,673", ker: "0,723", otr: "1787,53", tsr: "290382,902", ksr: "0,723" },
-    "XE AD6-1250A": { dt: "1.316,73", ut: "632,02", nva: "684,71", kd: "0,479", ke: "0,673", ker: "0,723", otr: "1820,48", tsr: "290382,902", ksr: "0,723" },
-    "XE TT6-1250A": { dt: "994,25", ut: "13,44", nva: "980,81", kd: "0,013", ke: "0,673", ker: "0,723", otr: "1374,62", tsr: "290382,902", ksr: "0,723" },
-};
-const db2024 = {
-    "XE AD6-1250A": { dt: "1308,4", ut: "937,45", nva: "370,95", kd: "0,716", ke: "0,733", ker: "0,783", otr: "1669,14", tsr: "#DIV/0!", ksr: "" },
-    "XE AD6-2500A": { dt: "1338,4", ut: "967,45", nva: "370,95", kd: "0,722", ke: "0,733", ker: "0,783", otr: "1707,41", tsr: "#DIV/0!", ksr: "" },
-    "NL GL6-1250A": { dt: "1.345,72", ut: "975,36", nva: "370,36", kd: "0,725", ke: "0,755", ker: "0,805", otr: "1671,72", tsr: "#DIV/0!", ksr: "" },
-};
-const db2025 = {
-    "XE AD6-1250A": { dt: "1.335,40", ut: "944,45", nva: "390,95", kd: "0,707", ke: "0,755", ker: "0,805", otr: "1658,9", tsr: "#DIV/0!", ksr: "" },
-    "XE GL6-1250A": { dt: "1.307,62", ut: "935,13", nva: "372,49", kd: "0,715", ke: "0,755", ker: "0,805", otr: "1624,39", tsr: "#DIV/0!", ksr: "" },
-};
-const ALL_DB = { '2023': db2023, '2024': db2024, '2025': db2025 };
-function parseValue(val) {
-    if (!val || val === "#DIV/0!")
-        return null;
-    // Remove thousands separator (.) and replace decimal separator (,) with (.)
-    // Example: "1.519,13" -> "1519.13"
-    // Example: "0,895" -> "0.895"
-    // Example: "1308,4" -> "1308.4"
-    // First remove all dots (thousands separators)
-    let clean = val.replace(/\./g, '');
-    // Then replace comma with dot
-    clean = clean.replace(',', '.');
-    const num = parseFloat(clean);
-    return isNaN(num) ? null : num;
-}
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        for (const yearStr of Object.keys(ALL_DB)) {
-            const year = parseInt(yearStr);
-            const products = ALL_DB[yearStr];
-            for (const productName of Object.keys(products)) {
-                const data = products[productName];
-                // Find or create product
-                const product = yield prisma.product.upsert({
-                    where: { name: productName },
-                    update: {},
-                    create: { name: productName },
-                });
-                // Create YearData
-                yield prisma.yearData.upsert({
-                    where: {
-                        productId_year: {
-                            productId: product.id,
-                            year: year
-                        }
-                    },
-                    update: {
-                        dt: parseValue(data.dt),
-                        ut: parseValue(data.ut),
-                        nva: parseValue(data.nva),
-                        kd: parseValue(data.kd),
-                        ke: parseValue(data.ke),
-                        ker: parseValue(data.ker),
-                        ksr: parseValue(data.ksr),
-                        otr: parseValue(data.otr),
-                        tsr: data.tsr,
-                    },
-                    create: {
-                        productId: product.id,
-                        year: year,
-                        dt: parseValue(data.dt),
-                        ut: parseValue(data.ut),
-                        nva: parseValue(data.nva),
-                        kd: parseValue(data.kd),
-                        ke: parseValue(data.ke),
-                        ker: parseValue(data.ker),
-                        ksr: parseValue(data.ksr),
-                        otr: parseValue(data.otr),
-                        tsr: data.tsr,
-                    }
-                });
+
+async function main() {
+    console.log('🌱 Seeding sample data...');
+
+    // Create sample lines
+    const lines = await Promise.all([
+        prisma.line.upsert({
+            where: { slug: 'main-assembly' },
+            update: {},
+            create: {
+                name: 'Main Assembly Line',
+                slug: 'main-assembly',
+                headerImageUrl: '/schneider_f400_diagram.png'
             }
+        }),
+        prisma.line.upsert({
+            where: { slug: 'secondary-line' },
+            update: {},
+            create: {
+                name: 'Secondary Production',
+                slug: 'secondary-line',
+                headerImageUrl: '/schneider_f400_diagram.png'
+            }
+        })
+    ]);
+
+    console.log('✅ Created lines');
+
+    // Create sample products with realistic manufacturing data
+    const products = [
+        { name: 'GL6-1250A', lineId: lines[0].id },
+        { name: 'GL6-1600A', lineId: lines[0].id },
+        { name: 'GL6-2000A', lineId: lines[0].id },
+        { name: 'NL GL6-1250A', lineId: lines[0].id },
+        { name: 'PowerLogic PM5000', lineId: lines[1].id },
+        { name: 'EasyLogic PM3000', lineId: lines[1].id },
+    ];
+
+    for (const productData of products) {
+        // Check if product exists
+        let product = await prisma.product.findFirst({
+            where: {
+                name: productData.name,
+                lineId: productData.lineId
+            }
+        });
+
+        // Create if doesn't exist
+        if (!product) {
+            product = await prisma.product.create({
+                data: {
+                    name: productData.name,
+                    lineId: productData.lineId,
+                    image: null
+                }
+            });
         }
-        console.log('Seeding finished.');
+
+        // Generate realistic year data (2023-2027)
+        const years = [2023, 2024, 2025, 2026, 2027];
+
+        for (const year of years) {
+            // Simulate improvement over years
+            const yearIndex = years.indexOf(year);
+            const improvementFactor = 1 + (yearIndex * 0.05); // 5% improvement per year
+
+            const baseKD = 0.75 + (Math.random() * 0.15); // 75-90% base efficiency
+            const kd = Math.min(0.95, baseKD * improvementFactor);
+
+            const dt = 45 + (Math.random() * 15); // 45-60 min cycle time
+            const ut = 85 + (Math.random() * 10); // 85-95% uptime
+            const nva = 15 - (yearIndex * 2) + (Math.random() * 5); // Decreasing waste
+
+            const otr = dt + ut + nva;
+            const ke = ut / otr;
+            const ker = dt / ut;
+            const ksr = otr / dt;
+
+            await prisma.yearData.upsert({
+                where: {
+                    productId_year: {
+                        productId: product.id,
+                        year: year
+                    }
+                },
+                update: {
+                    dt: parseFloat(dt.toFixed(2)),
+                    ut: parseFloat(ut.toFixed(2)),
+                    nva: parseFloat(nva.toFixed(2)),
+                    kd: parseFloat(kd.toFixed(4)),
+                    ke: parseFloat(ke.toFixed(4)),
+                    ker: parseFloat(ker.toFixed(4)),
+                    ksr: parseFloat(ksr.toFixed(4)),
+                    otr: parseFloat(otr.toFixed(2)),
+                    tsr: `${(kd * 100).toFixed(1)}%`
+                },
+                create: {
+                    productId: product.id,
+                    year: year,
+                    dt: parseFloat(dt.toFixed(2)),
+                    ut: parseFloat(ut.toFixed(2)),
+                    nva: parseFloat(nva.toFixed(2)),
+                    kd: parseFloat(kd.toFixed(4)),
+                    ke: parseFloat(ke.toFixed(4)),
+                    ker: parseFloat(ker.toFixed(4)),
+                    ksr: parseFloat(ksr.toFixed(4)),
+                    otr: parseFloat(otr.toFixed(2)),
+                    tsr: `${(kd * 100).toFixed(1)}%`
+                }
+            });
+        }
+
+        console.log(`✅ Created product: ${product.name}`);
+    }
+
+    // Update global settings
+    await prisma.globalSettings.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+            headerImageUrl: '/schneider_f400_diagram.png',
+            availableYears: [2023, 2024, 2025, 2026, 2027]
+        }
     });
+
+    console.log('✅ Updated global settings');
+    console.log('🎉 Sample data seeding completed!');
 }
+
 main()
-    .then(() => __awaiter(void 0, void 0, void 0, function* () {
-        yield prisma.$disconnect();
-    }))
-    .catch((e) => __awaiter(void 0, void 0, void 0, function* () {
-        console.error(e);
-        yield prisma.$disconnect();
+    .catch((e) => {
+        console.error('❌ Error seeding data:', e);
         process.exit(1);
-    }));
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

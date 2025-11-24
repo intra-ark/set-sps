@@ -12,6 +12,7 @@ import {
     calculateAverageByYear,
     Product
 } from '@/lib/analytics';
+import { exportAnalyticsToPDF } from '@/lib/pdfExport';
 
 interface AnalyticsDashboardProps {
     products: Product[];
@@ -20,6 +21,7 @@ interface AnalyticsDashboardProps {
 export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps) {
     const [selectedYear, setSelectedYear] = useState(2024);
     const [selectedMetric, setSelectedMetric] = useState<any>('kd');
+    const [isExporting, setIsExporting] = useState(false);
 
     // Get available years
     const availableYears = useMemo(() => {
@@ -66,6 +68,28 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
         [products]
     );
 
+    // Export handler
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        try {
+            await exportAnalyticsToPDF({
+                title: 'Manufacturing Analytics Report',
+                subtitle: `Performance Analysis for Year ${selectedYear}`,
+                userName: 'System User', // This could come from session
+                selectedYear,
+                avgSPS,
+                avgCycleTime,
+                avgUptime,
+                avgNVA
+            });
+        } catch (error) {
+            console.error('PDF Export failed:', error);
+            alert('Failed to export PDF. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     if (products.length === 0) {
         return (
             <div className="p-8">
@@ -102,6 +126,23 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
                             <option value="ut">Uptime (UT)</option>
                             <option value="nva">NVA</option>
                         </select>
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isExporting}
+                            className="flex items-center gap-2 px-6 py-2 bg-[#3dcd58] hover:bg-green-600 text-white font-semibold rounded-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isExporting ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <span>📄</span>
+                                    Export PDF
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -144,18 +185,22 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
 
             {/* Trend Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <TrendChart
-                    data={spsTrend}
-                    title="SPS Trend Over Years"
-                    yAxisLabel="SPS (%)"
-                    color="#3dcd58"
-                />
-                <TrendChart
-                    data={cycleTimeTrend}
-                    title="Cycle Time Trend"
-                    yAxisLabel="Minutes"
-                    color="#3b82f6"
-                />
+                <div id="trend-sps">
+                    <TrendChart
+                        data={spsTrend}
+                        title="SPS Trend Over Years"
+                        yAxisLabel="SPS (%)"
+                        color="#3dcd58"
+                    />
+                </div>
+                <div id="trend-cycletime">
+                    <TrendChart
+                        data={cycleTimeTrend}
+                        title="Cycle Time Trend"
+                        yAxisLabel="Minutes"
+                        color="#3b82f6"
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -175,16 +220,20 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
 
             {/* Comparison and Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ComparisonChart
-                    data={topProducts}
-                    title={`Top 10 Products by ${selectedMetric.toUpperCase()} (${selectedYear})`}
-                    yAxisLabel={selectedMetric.toUpperCase()}
-                    showRanking={true}
-                />
-                <TimeBreakdownChart
-                    data={timeBreakdown}
-                    title="Manufacturing Time Breakdown"
-                />
+                <div id="comparison-chart">
+                    <ComparisonChart
+                        data={topProducts}
+                        title={`Top 10 Products by ${selectedMetric.toUpperCase()} (${selectedYear})`}
+                        yAxisLabel={selectedMetric.toUpperCase()}
+                        showRanking={true}
+                    />
+                </div>
+                <div id="time-breakdown">
+                    <TimeBreakdownChart
+                        data={timeBreakdown}
+                        title="Manufacturing Time Breakdown"
+                    />
+                </div>
             </div>
 
             {/* Info Section */}
