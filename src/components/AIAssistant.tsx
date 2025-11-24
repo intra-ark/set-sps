@@ -16,7 +16,7 @@ export default function AIAssistant({ selectedLineId }: AIAssistantProps) {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: 'Merhaba! Ben Intra Arc, Ahmet Mersin tarafından geliştirilmiş ileri seviye düşünce sistemiyim. SET SPS, ürünleriniz veya analizler hakkında her şeyi sorabilirsiniz. 🚀'
+            content: 'Merhaba! Ben Intra Arc, Ahmet Mersin tarafından geliştirilmiş düşünce sistemiyim. SET SPS, ürünleriniz veya analizler hakkında her şeyi sorabilirsiniz. 🚀'
         }
     ]);
     const [input, setInput] = useState('');
@@ -129,7 +129,7 @@ export default function AIAssistant({ selectedLineId }: AIAssistantProps) {
                                 </div>
                                 <div>
                                     <h3 className="text-white font-bold text-lg tracking-wide">Intra Arc</h3>
-                                    <p className="text-cyan-400 text-xs font-mono">İleri seviye düşünce sistemi</p>
+                                    <p className="text-cyan-400 text-xs font-mono">Düşünce Sistemi</p>
                                 </div>
                             </div>
                             <button
