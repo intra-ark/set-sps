@@ -91,7 +91,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
     const handleExportPDF = async () => {
         setIsExporting(true);
         try {
-            // Use the already generated AI analysis from the dashboard
+            // 2. Generate PDF
             await exportAnalyticsToPDF({
                 title: 'Manufacturing Analytics Report',
                 subtitle: `Performance Analysis for Year ${selectedYear}`,
@@ -100,8 +100,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
                 avgSPS,
                 avgCycleTime,
                 avgUptime,
-                avgNVA,
-                aiSummary: aiAnalysisText // Use stored analysis
+                avgNVA
             });
         } catch (error) {
             console.error('PDF Export failed:', error);
