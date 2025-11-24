@@ -19,15 +19,15 @@ interface AnalyticsDashboardProps {
 }
 
 export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps) {
-    const [selectedYear, setSelectedYear] = useState(2024);
-    const [selectedMetric, setSelectedMetric] = useState<any>('kd');
-    const [isExporting, setIsExporting] = useState(false);
-
-    // Get available years
+    // Get available years first to set correct default
     const availableYears = useMemo(() => {
         const years = products.flatMap(p => p.yearData.map(yd => yd.year));
         return [...new Set(years)].sort((a, b) => b - a);
     }, [products]);
+
+    const [selectedYear, setSelectedYear] = useState(availableYears[0] || 2025);
+    const [selectedMetric, setSelectedMetric] = useState<keyof YearData>('kd');
+    const [isExporting, setIsExporting] = useState(false);
 
     // Calculate KPIs
     const avgSPS = useMemo(() =>
