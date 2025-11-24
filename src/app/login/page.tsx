@@ -30,26 +30,14 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
             <div className="w-full max-w-md space-y-6">
-                {/* Security Banner */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-t-[5px] border-[#3dcd58] p-8 text-center">
-                    <div className="text-5xl mb-4">🔒</div>
-                    <h2 className="text-xl font-bold text-[#3dcd58] uppercase tracking-wide mb-4">
-                        Yetkili Erişim
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
-                        Bu sistem <span className="font-bold text-gray-800 dark:text-white">Schneider Electric</span> mülkiyetindedir ve yalnızca yetkili iş kullanımı için tasarlanmıştır.
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                        Bu sistemdeki tüm aktiviteler güvenlik amaçlı kaydedilir ve izlenir. Yetkisiz erişim veya kötüye kullanım kesinlikle yasaktır.
-                    </p>
-                    <div className="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-4 mt-6">
-                        Giriş yaparak Kabul Edilebilir Kullanım Politikasını kabul etmiş olursunuz.
-                    </div>
-                </div>
-
-                {/* Login Form */}
+                {/* Login Form - Now First */}
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
-                    <h1 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Admin Login</h1>
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-[#3dcd58] rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xl font-bold">SE</span>
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Admin Login</h1>
+                    </div>
 
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
@@ -85,6 +73,32 @@ export default function LoginPage() {
                             Sign In
                         </button>
                     </form>
+                </div>
+
+                {/* Security Banner - Now Below Login */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-t-[5px] border-[#3dcd58] p-8 text-center">
+                    <div className="text-5xl mb-4">🔒</div>
+                    <h2 className="text-xl font-bold text-[#3dcd58] uppercase tracking-wide mb-4">
+                        Yetkili Erişim
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
+                        Bu sistem <span className="font-bold text-gray-800 dark:text-white">Schneider Electric</span> mülkiyetindedir ve yalnızca yetkili iş kullanımı için tasarlanmıştır.
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                        Bu sistemdeki tüm aktiviteler güvenlik amaçlı kaydedilir ve izlenir. Yetkisiz erişim veya kötüye kullanım kesinlikle yasaktır ve yürürlükteki ulusal ve uluslararası siber güvenlik yasalarına tabidir.
+                    </p>
+                    <div className="text-xs text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4">
+                        <p className="mb-2">Bu sistem aşağıdaki yasalar kapsamında korunmaktadır:</p>
+                        <ul className="text-left space-y-1 pl-4">
+                            <li>• GDPR (EU 2016/679)</li>
+                            <li>• Computer Fraud and Abuse Act (CFAA)</li>
+                            <li>• Computer Misuse Act 1990</li>
+                            <li>• ISO/IEC 27001 Security Standards</li>
+                        </ul>
+                    </div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-4">
+                        Giriş yaparak Kabul Edilebilir Kullanım Politikasını ve yürürlükteki tüm güvenlik düzenlemelerini kabul etmiş olursunuz.
+                    </div>
                 </div>
             </div>
         </div>
