@@ -26,11 +26,15 @@ export default function AdminLinePage() {
 
     useEffect(() => {
         if (lineId) {
-            fetch(`/api/lines/${lineId}`)
+            // Fetch line data
+            fetch('/api/lines')
                 .then(res => res.json())
-                .then(data => {
-                    setLine(data);
-                    setImageUrl(data.headerImageUrl || '');
+                .then((data: Line[]) => {
+                    const found = data.find(l => l.id === parseInt(lineId as string));
+                    setLine(found || null);
+                    if (found?.headerImageUrl) {
+                        setImageUrl(found.headerImageUrl);
+                    }
                     setLoading(false);
                 })
                 .catch(err => {
