@@ -44,14 +44,14 @@ export async function GET() {
                     'Product Name': product.name,
                     'Line': product.line?.name || 'N/A',
                     'Year': yd.year,
-                    'DT': yd.dt,
-                    'UT': yd.ut,
-                    'NVA': yd.nva,
+                    'DT': yd.dt ?? 0,
+                    'UT': yd.ut ?? 0,
+                    'NVA': yd.nva ?? 0,
                     'KD (%)': yd.kd ? (yd.kd * 100).toFixed(2) : 'N/A',
                     'KE (%)': yd.ke ? (yd.ke * 100).toFixed(2) : 'N/A',
                     'KER (%)': yd.ker ? (yd.ker * 100).toFixed(2) : 'N/A',
                     'KSR (%)': yd.ksr ? (yd.ksr * 100).toFixed(2) : 'N/A',
-                    'OT': yd.otr,
+                    'OT': yd.otr ?? 0,
                     'TSR': yd.tsr || 'N/A',
                 });
             });
