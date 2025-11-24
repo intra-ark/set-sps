@@ -10,7 +10,8 @@ import {
     getTopProducts,
     getTimeBreakdownTrend,
     calculateAverageByYear,
-    Product
+    Product,
+    YearData
 } from '@/lib/analytics';
 import { exportAnalyticsToPDF } from '@/lib/pdfExport';
 
