@@ -36,7 +36,7 @@ export default function LoginPage() {
                         <div className="w-10 h-10 bg-[#3dcd58] rounded-lg flex items-center justify-center">
                             <span className="text-white text-xl font-bold">SE</span>
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Admin Login</h1>
+                        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">SET System Gate</h1>
                     </div>
 
                     {error && (
