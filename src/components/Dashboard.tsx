@@ -147,6 +147,28 @@ export default function Dashboard() {
         }
     }, [handleLineSelect, selectedLineId]);
 
+    // Auto-refresh when window regains focus (e.g., switching from admin panel)
+    useEffect(() => {
+        const handleFocus = () => {
+            // Re-fetch lines and products
+            fetch('/api/lines')
+                .then(res => res.json())
+                .then((data: Line[]) => {
+                    if (Array.isArray(data)) {
+                        setLines(data);
+                        // Re-select current line to refresh products
+                        if (selectedLineId !== null) {
+                            handleLineSelect(selectedLineId);
+                        }
+                    }
+                })
+                .catch(err => console.error('Error refreshing lines:', err));
+        };
+
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [selectedLineId, handleLineSelect]);
+
     // ... (rest of component)
 
 

@@ -96,7 +96,8 @@ export default function AdminDashboard() {
             });
 
             if (response.ok) {
-                fetchLines();
+                alert(`Line "${lineName}" deleted successfully! Please refresh the homepage if needed.`);
+                fetchLines(); // Refresh lines list
             } else {
                 alert('Failed to delete line');
             }
