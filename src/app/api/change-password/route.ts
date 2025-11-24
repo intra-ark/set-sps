@@ -26,6 +26,12 @@ export async function POST(request: Request) {
             if (!targetUser) {
                 return NextResponse.json({ error: 'User not found' }, { status: 404 });
             }
+
+            // SUPER ADMIN PROTECTION: Prevent admins from changing "Ahmet Mersin" password
+            if (targetUser.username.toLowerCase() === 'ahmet mersin' && session.user.name?.toLowerCase() !== 'ahmet mersin') {
+                return NextResponse.json({ error: 'Cannot change Super Admin password' }, { status: 403 });
+            }
+
             targetUsername = targetUser.username;
         } else {
             // Regular user changing their own password
