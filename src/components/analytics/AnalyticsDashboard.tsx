@@ -222,7 +222,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div id="comparison-chart">
                     <ComparisonChart
-                        key={`${selectedMetric}-${selectedYear}`}
+                        key={`${String(selectedMetric)}-${selectedYear}`}
                         data={topProducts}
                         title={`Top 10 Products by ${selectedMetric.toUpperCase()} (${selectedYear})`}
                         yAxisLabel={selectedMetric.toUpperCase()}
