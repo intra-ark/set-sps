@@ -28,6 +28,8 @@ model Product {
   
   lineId    Int?
   line      Line?      @relation(fields: [lineId], references: [id])
+
+  @@index([lineId])
 }
 
 model YearData {

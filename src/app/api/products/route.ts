@@ -12,9 +12,33 @@ export async function GET(request: Request) {
         const where = lineId ? { lineId: parseInt(lineId) } : {};
         const products = await prisma.product.findMany({
             where,
-            include: {
-                yearData: true,
+            select: {
+                id: true,
+                name: true,
+                image: true,
+                lineId: true,
+                yearData: {
+                    select: {
+                        id: true,
+                        year: true,
+                        dt: true,
+                        ut: true,
+                        nva: true,
+                        kd: true,
+                        ke: true,
+                        ker: true,
+                        ksr: true,
+                        otr: true,
+                        tsr: true,
+                    },
+                    orderBy: {
+                        year: 'desc'
+                    }
+                }
             },
+            orderBy: {
+                name: 'asc'
+            }
         });
         return NextResponse.json(products);
     } catch {
