@@ -22,26 +22,35 @@ export default function AdminLinePage() {
     const [uploading, setUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+    const [availableYears, setAvailableYears] = useState<number[]>([]);
+
     useEffect(() => {
         if (lineId) {
-            fetch('/api/lines')
+            fetch(`/api/lines/${lineId}`)
                 .then(res => res.json())
-                .then((data: Line[]) => {
-                    const found = data.find(l => l.id === parseInt(lineId as string));
-                    setLine(found || null);
-                    if (found?.headerImageUrl) {
-                        setImageUrl(found.headerImageUrl);
-                    }
+                .then(data => {
+                    setLine(data);
+                    setImageUrl(data.headerImageUrl || '');
                     setLoading(false);
                 })
                 .catch(err => {
                     console.error(err);
                     setLoading(false);
                 });
+
+            // Fetch available years
+            fetch('/api/settings/years')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        setAvailableYears(data);
+                    }
+                })
+                .catch(err => console.error('Failed to fetch years:', err));
         }
     }, [lineId]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setSelectedFile(file);
@@ -51,8 +60,8 @@ export default function AdminLinePage() {
         }
     };
 
-    const handleImageUpload = async () => {
-        if (!line || !selectedFile) return;
+    const handleUpload = async () => {
+        if (!selectedFile || !line) return;
 
         setUploading(true);
         try {
@@ -144,17 +153,25 @@ export default function AdminLinePage() {
             <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Year Data Management</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[2023, 2024, 2025, 2026, 2027].map(year => (
-                        <Link key={year} href={`/admin/${lineId}/${year}`} className="block group">
-                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border-2 border-transparent hover:border-primary transition-all duration-300 transform hover:-translate-y-1">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-4xl font-bold text-gray-800 dark:text-white">{year}</span>
-                                    <span className="material-icons-outlined text-4xl text-primary group-hover:scale-110 transition-transform">calendar_today</span>
+                    {availableYears.length > 0 ? (
+                        availableYears.map(year => (
+                            <Link key={year} href={`/admin/${lineId}/${year}`} className="block group">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border-2 border-transparent hover:border-primary transition-all duration-300 transform hover:-translate-y-1">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-4xl font-bold text-primary">{year}</span>
+                                        <span className="material-icons-outlined text-gray-400 group-hover:text-primary transition-colors text-3xl">
+                                            calendar_today
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-500 dark:text-gray-400">Manage products and SPS data for {year}</p>
                                 </div>
-                                <p className="text-gray-500 dark:text-gray-400 font-medium">Manage Data &rarr;</p>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        ))
+                    ) : (
+                        <div className="col-span-3 text-center p-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                            <p className="text-gray-500">No years configured. Please ask an admin to add years in the Admin Dashboard.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -193,10 +210,22 @@ export default function AdminLinePage() {
                                         <input
                                             type="file"
                                             accept="image/*"
-                                            onChange={handleFileChange}
+                                            onChange={handleFileSelect}
                                             className="hidden"
                                         />
                                     </label>
+                                    {selectedFile && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-500">{selectedFile.name}</span>
+                                            <button
+                                                onClick={handleUpload}
+                                                disabled={uploading}
+                                                className="bg-primary hover:bg-green-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                                            >
+                                                {uploading ? 'Uploading...' : 'Save Image'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

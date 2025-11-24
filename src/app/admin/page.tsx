@@ -20,6 +20,9 @@ export default function AdminDashboard() {
     const [newLineSlug, setNewLineSlug] = useState('');
     const [creating, setCreating] = useState(false);
     const [showBackupMenu, setShowBackupMenu] = useState(false);
+    const [showYearModal, setShowYearModal] = useState(false);
+    const [availableYears, setAvailableYears] = useState<number[]>([]);
+    const [newYearInput, setNewYearInput] = useState('');
 
     const isAdmin = session?.user?.role === 'ADMIN';
 
@@ -40,16 +43,85 @@ export default function AdminDashboard() {
             });
     };
 
+    const fetchYears = async () => {
+        try {
+            const res = await fetch('/api/settings/years');
+            if (res.ok) {
+                const data = await res.json();
+                setAvailableYears(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch years:', error);
+        }
+    };
+
     useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (showBackupMenu && !(e.target as HTMLElement).closest('.backup-menu-container')) {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showBackupMenu && !(event.target as Element).closest('.backup-menu-container')) {
                 setShowBackupMenu(false);
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, [showBackupMenu]);
+
+    useEffect(() => {
+        fetchLines();
+        if (isAdmin) {
+            fetchYears();
+        }
+    }, [isAdmin]);
+
+    const handleAddYear = async () => {
+        const year = parseInt(newYearInput);
+        if (!year || isNaN(year)) return;
+
+        try {
+            const res = await fetch('/api/settings/years', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                setAvailableYears(updated);
+                setNewYearInput('');
+                alert('Year added successfully!');
+            } else {
+                const error = await res.json();
+                alert(error.error || 'Failed to add year');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error adding year');
+        }
+    };
+
+    const handleDeleteYear = async (year: number) => {
+        if (!confirm(`Are you sure you want to delete year ${year}? This will NOT delete the data associated with it, but it will hide it from selection.`)) return;
+
+        try {
+            const res = await fetch('/api/settings/years', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                setAvailableYears(updated);
+            } else {
+                alert('Failed to delete year');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error deleting year');
+        }
+    };
 
     const handleCreateLine = async () => {
         if (!newLineName.trim() || !newLineSlug.trim()) {
@@ -205,54 +277,64 @@ export default function AdminDashboard() {
                 <div className="flex gap-4 items-center">
                     {/* Database Management - Minimal Button */}
                     {isAdmin && (
-                        <div className="relative group backup-menu-container">
+                        <div className="flex gap-2">
                             <button
-                                onClick={() => setShowBackupMenu(!showBackupMenu)}
+                                onClick={() => setShowYearModal(true)}
                                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                title="Database Management"
+                                title="Manage Years"
                             >
-                                <span className="material-icons-outlined text-gray-600 dark:text-gray-400">storage</span>
+                                <span className="material-icons-outlined text-gray-600 dark:text-gray-400">calendar_today</span>
                             </button>
 
-                            {/* Dropdown Menu */}
-                            {showBackupMenu && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
-                                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Database</p>
+                            <div className="relative group backup-menu-container">
+                                <button
+                                    onClick={() => setShowBackupMenu(!showBackupMenu)}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    title="Database Management"
+                                >
+                                    <span className="material-icons-outlined text-gray-600 dark:text-gray-400">storage</span>
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {showBackupMenu && (
+                                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+                                        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Database</p>
+                                        </div>
+                                        <div className="p-2">
+                                            <button
+                                                onClick={() => { handleExportBackup(); setShowBackupMenu(false); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm"
+                                            >
+                                                <span className="material-icons-outlined text-blue-600 text-base">download</span>
+                                                <span className="text-gray-700 dark:text-gray-300">Export JSON</span>
+                                            </button>
+                                            <button
+                                                onClick={() => { handleExportExcel(); setShowBackupMenu(false); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm"
+                                            >
+                                                <span className="material-icons-outlined text-green-600 text-base">table_chart</span>
+                                                <span className="text-gray-700 dark:text-gray-300">Export Excel</span>
+                                            </button>
+                                            <label className="w-full">
+                                                <div className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm cursor-pointer">
+                                                    <span className="material-icons-outlined text-orange-600 text-base">upload</span>
+                                                    <span className="text-gray-700 dark:text-gray-300">Import JSON</span>
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    accept=".json"
+                                                    onChange={(e) => { handleImportBackup(e); setShowBackupMenu(false); }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 px-2">Import replaces all data</p>
+                                        </div>
                                     </div>
-                                    <div className="p-2">
-                                        <button
-                                            onClick={() => { handleExportBackup(); setShowBackupMenu(false); }}
-                                            className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm"
-                                        >
-                                            <span className="material-icons-outlined text-blue-600 text-base">download</span>
-                                            <span className="text-gray-700 dark:text-gray-300">Export JSON</span>
-                                        </button>
-                                        <button
-                                            onClick={() => { handleExportExcel(); setShowBackupMenu(false); }}
-                                            className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm"
-                                        >
-                                            <span className="material-icons-outlined text-green-600 text-base">table_chart</span>
-                                            <span className="text-gray-700 dark:text-gray-300">Export Excel</span>
-                                        </button>
-                                        <label className="w-full">
-                                            <div className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm cursor-pointer">
-                                                <span className="material-icons-outlined text-orange-600 text-base">upload</span>
-                                                <span className="text-gray-700 dark:text-gray-300">Import JSON</span>
-                                            </div>
-                                            <input
-                                                type="file"
-                                                accept=".json"
-                                                onChange={(e) => { handleImportBackup(e); setShowBackupMenu(false); }}
-                                                className="hidden"
-                                            />
-                                        </label>
-                                    </div>
-                                    <div className="p-2 border-t border-gray-200 dark:border-gray-700">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 px-2">Import replaces all data</p>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -335,6 +417,68 @@ export default function AdminDashboard() {
                                 </Link>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Year Management Modal */}
+            {showYearModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Manage Years</h3>
+                            <button
+                                onClick={() => setShowYearModal(false)}
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Add New Year
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    min="2000"
+                                    max="2100"
+                                    value={newYearInput}
+                                    onChange={(e) => setNewYearInput(e.target.value)}
+                                    placeholder="e.g. 2028"
+                                    className="flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent"
+                                />
+                                <button
+                                    onClick={handleAddYear}
+                                    disabled={!newYearInput}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 rounded-lg disabled:opacity-50 transition-colors"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Available Years</h4>
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {availableYears.map(year => (
+                                    <div key={year} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <span className="font-semibold text-gray-800 dark:text-white">{year}</span>
+                                        <button
+                                            onClick={() => handleDeleteYear(year)}
+                                            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                            title="Delete Year"
+                                        >
+                                            <span className="material-icons-outlined text-sm">delete</span>
+                                        </button>
+                                    </div>
+                                ))}
+                                {availableYears.length === 0 && (
+                                    <p className="text-gray-500 text-center py-4">No years configured.</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
