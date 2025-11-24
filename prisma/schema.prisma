@@ -27,7 +27,7 @@ model Product {
   yearData  YearData[]
   
   lineId    Int?
-  line      Line?      @relation(fields: [lineId], references: [id])
+  line      Line?      @relation(fields: [lineId], references: [id], onDelete: Cascade)
 
   @@index([lineId])
 }
