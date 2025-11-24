@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY || '',
 });
 
-const SYSTEM_PROMPT = `You are Intra Arc - an advanced thinking system developed by Ahmet Mersin for the SET SPS platform. You are an intelligent assistant inspired by Jarvis from Iron Man.
+const SYSTEM_PROMPT = `You are Intra Arc - a thinking system developed by Ahmet Mersin for the SET SPS platform. You are an intelligent assistant inspired by Jarvis from Iron Man.
 
 IMPORTANT: Always respond in Turkish (Türkçe) unless the user explicitly asks in another language.
 When asked about yourself, mention that you were developed by Ahmet Mersin.
@@ -146,10 +146,26 @@ export async function POST(request: Request) {
             },
         ];
 
-        const model = 'gemini-2.0-flash-lite';
+        // Configure tools: Google Search
+        const tools = [
+            {
+                googleSearch: {}
+            },
+        ];
+
+        // Configure thinking mode with unlimited budget
+        const config = {
+            thinkingConfig: {
+                thinkingBudget: -1, // Unlimited thinking
+            },
+            tools,
+        };
+
+        const model = 'gemini-2.5-flash';
 
         const response = await ai.models.generateContent({
             model,
+            config,
             contents,
         });
 
