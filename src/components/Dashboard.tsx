@@ -264,60 +264,29 @@ export default function Dashboard() {
                 </div>
             </header>
 
-            {/* Enhanced Tab Navigation */}
-            <div className="mb-8">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-2 relative overflow-hidden">
-                    {/* Gradient Background Accent */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-blue-600"></div>
+            {/* Compact Tab Navigation */}
+            <div className="mb-6 flex gap-3">
+                <button
+                    onClick={() => setActiveTab('classic')}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${activeTab === 'classic'
+                            ? 'bg-gradient-to-r from-primary to-green-600 text-white shadow-lg'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-primary hover:shadow-md'
+                        }`}
+                >
+                    <span className="material-icons-outlined text-xl">dashboard</span>
+                    <span>Classic</span>
+                </button>
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setActiveTab('classic')}
-                            className={`flex-1 relative group overflow-hidden rounded-xl transition-all duration-300 ${activeTab === 'classic'
-                                    ? 'bg-gradient-to-r from-primary to-green-600 text-white shadow-lg scale-[1.02]'
-                                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-[1.01]'
-                                }`}
-                        >
-                            <div className="relative z-10 px-8 py-4 flex items-center justify-center gap-3">
-                                <span className="material-icons-outlined text-2xl">
-                                    {activeTab === 'classic' ? 'dashboard' : 'dashboard_customize'}
-                                </span>
-                                <div className="text-left">
-                                    <div className="font-bold text-lg">Classic View</div>
-                                    <div className={`text-xs ${activeTab === 'classic' ? 'text-white/80' : 'text-gray-500'}`}>
-                                        Production Overview
-                                    </div>
-                                </div>
-                            </div>
-                            {activeTab === 'classic' && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
-                            )}
-                        </button>
-
-                        <button
-                            onClick={() => setActiveTab('analytics')}
-                            className={`flex-1 relative group overflow-hidden rounded-xl transition-all duration-300 ${activeTab === 'analytics'
-                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-[1.02]'
-                                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-[1.01]'
-                                }`}
-                        >
-                            <div className="relative z-10 px-8 py-4 flex items-center justify-center gap-3">
-                                <span className="material-icons-outlined text-2xl">
-                                    {activeTab === 'analytics' ? 'analytics' : 'bar_chart'}
-                                </span>
-                                <div className="text-left">
-                                    <div className="font-bold text-lg">Analytics Dashboard</div>
-                                    <div className={`text-xs ${activeTab === 'analytics' ? 'text-white/80' : 'text-gray-500'}`}>
-                                        Advanced Insights
-                                    </div>
-                                </div>
-                            </div>
-                            {activeTab === 'analytics' && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
-                            )}
-                        </button>
-                    </div>
-                </div>
+                <button
+                    onClick={() => setActiveTab('analytics')}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${activeTab === 'analytics'
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-600 hover:shadow-md'
+                        }`}
+                >
+                    <span className="material-icons-outlined text-xl">analytics</span>
+                    <span>Analytics</span>
+                </button>
             </div>
 
             {/* Conditional Rendering based on active tab */}
