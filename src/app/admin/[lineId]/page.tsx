@@ -245,7 +245,7 @@ export default function AdminLinePage() {
                             {/* Action Buttons */}
                             <div className="flex gap-3">
                                 <button
-                                    onClick={handleImageUpload}
+                                    onClick={handleUpload}
                                     disabled={uploading || !selectedFile}
                                     className="flex-1 px-6 py-2 bg-primary hover:bg-green-600 text-white font-bold rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                                 >
