@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import AIExecutiveSummary from './AIExecutiveSummary';
 import TrendChart from './TrendChart';
 import ComparisonChart from './ComparisonChart';
 import TimeBreakdownChart from './TimeBreakdownChart';
@@ -28,6 +29,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
 
     const [selectedYear, setSelectedYear] = useState(availableYears[0] || 2025);
     const [isExporting, setIsExporting] = useState(false);
+    const [aiAnalysisText, setAiAnalysisText] = useState<string>("");
 
     // Calculate KPIs
     const avgSPS = useMemo(() =>
@@ -56,6 +58,23 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
     const uptimeTrend = useMemo(() => getMetricTrend(products, 'ut'), [products]);
     const nvaTrend = useMemo(() => getMetricTrend(products, 'nva'), [products]);
 
+    // Calculate trend direction for AI
+    const { trendDirection, trendPercentage } = useMemo(() => {
+        const sortedTrend = [...spsTrend].sort((a, b) => a.year - b.year);
+        let direction = 'Stabil';
+        let percentage = 0;
+
+        if (sortedTrend.length >= 2) {
+            const first = sortedTrend[0].value;
+            const last = sortedTrend[sortedTrend.length - 1].value;
+            if (first !== 0) {
+                percentage = ((last - first) / first) * 100;
+                direction = percentage > 0 ? 'Artışta' : percentage < 0 ? 'Düşüşte' : 'Stabil';
+            }
+        }
+        return { trendDirection: direction, trendPercentage: percentage };
+    }, [spsTrend]);
+
     // Get top products by SPS
     const topProducts = useMemo(() =>
         getTopProducts(products, 'kd', selectedYear, 10),
@@ -72,56 +91,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
     const handleExportPDF = async () => {
         setIsExporting(true);
         try {
-            // 1. Get AI Analysis
-            let aiAnalysis = '';
-            try {
-                // Calculate SPS trend manually
-                const sortedTrend = [...spsTrend].sort((a, b) => a.year - b.year);
-                let trendDirection = 'Stabil';
-                let trendPercentage = 0;
-
-                if (sortedTrend.length >= 2) {
-                    const first = sortedTrend[0].value;
-                    const last = sortedTrend[sortedTrend.length - 1].value;
-                    if (first !== 0) {
-                        trendPercentage = ((last - first) / first) * 100;
-                        trendDirection = trendPercentage > 0 ? 'Artışta' : trendPercentage < 0 ? 'Düşüşte' : 'Stabil';
-                    }
-                }
-
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: `GÖREV: ${selectedYear} yılı üretim verileri için PDF raporunda kullanılacak profesyonel bir yönetici özeti yaz.
-
-                        VERİLER:
-                        - Ortalama SPS (Verimlilik): %${avgSPS.toFixed(1)}
-                        - Ortalama Çevrim Süresi: ${avgCycleTime.toFixed(1)} dk
-                        - Ortalama Uptime: %${avgUptime.toFixed(1)}
-                        - Ortalama NVA (Değersiz Zaman): ${avgNVA.toFixed(1)} dk
-                        - Trend: ${trendDirection} (%${trendPercentage.toFixed(1)})
-
-                        KURALLAR:
-                        1. SADECE analizi yaz. "Harika bir talep", "İşte analiziniz" gibi giriş/çıkış cümleleri KESİNLİKLE KULLANMA.
-                        2. Doğrudan konuya gir (Örn: "2027 yılı verileri gösteriyor ki...").
-                        3. 3-4 cümle ile sınırla.
-                        4. Profesyonel, veriye dayalı ve resmi bir dil kullan.
-                        5. Verimlilik, darboğazlar ve iyileştirme fırsatlarına odaklan.`,
-                        history: [] // No history needed for this one-off request
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    aiAnalysis = data.response;
-                }
-            } catch (error) {
-                console.error('AI Analysis failed:', error);
-                // Continue without AI analysis if it fails
-            }
-
-            // 2. Generate PDF
+            // Use the already generated AI analysis from the dashboard
             await exportAnalyticsToPDF({
                 title: 'Manufacturing Analytics Report',
                 subtitle: `Performance Analysis for Year ${selectedYear}`,
@@ -131,7 +101,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
                 avgCycleTime,
                 avgUptime,
                 avgNVA,
-                aiSummary: aiAnalysis // Pass the AI summary
+                aiSummary: aiAnalysisText // Use stored analysis
             });
         } catch (error) {
             console.error('PDF Export failed:', error);
@@ -175,7 +145,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
                             {isExporting ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Analyzing & Exporting...
+                                    Exporting...
                                 </>
                             ) : (
                                 <>
@@ -186,6 +156,18 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
                         </button>
                     </div>
                 </div>
+
+                {/* AI Executive Summary */}
+                <AIExecutiveSummary
+                    avgSPS={avgSPS}
+                    avgCycleTime={avgCycleTime}
+                    avgUptime={avgUptime}
+                    avgNVA={avgNVA}
+                    trendDirection={trendDirection}
+                    trendPercentage={trendPercentage}
+                    selectedYear={selectedYear}
+                    onAnalysisUpdate={setAiAnalysisText}
+                />
             </div>
 
             {/* KPI Cards */}
