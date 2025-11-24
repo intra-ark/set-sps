@@ -19,6 +19,7 @@ export default function AdminDashboard() {
     const [newLineName, setNewLineName] = useState('');
     const [newLineSlug, setNewLineSlug] = useState('');
     const [creating, setCreating] = useState(false);
+    const [showBackupMenu, setShowBackupMenu] = useState(false);
 
     const isAdmin = session?.user?.role === 'ADMIN';
 
@@ -38,6 +39,17 @@ export default function AdminDashboard() {
                 setLoading(false);
             });
     };
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (showBackupMenu && !(e.target as HTMLElement).closest('.backup-menu-container')) {
+                setShowBackupMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showBackupMenu]);
 
     const handleCreateLine = async () => {
         if (!newLineName.trim() || !newLineSlug.trim()) {
@@ -118,6 +130,30 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleExportExcel = async () => {
+        try {
+            const response = await fetch('/api/backup/excel');
+            if (!response.ok) {
+                throw new Error('Failed to export Excel');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `set-sps-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            alert('Excel exported successfully!');
+        } catch (error) {
+            console.error(error);
+            alert('Failed to export Excel');
+        }
+    };
+
     const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -165,7 +201,60 @@ export default function AdminDashboard() {
         <div className="p-8 max-w-6xl mx-auto">
             <header className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Admin Dashboard</h1>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
+                    {/* Database Management - Minimal Button */}
+                    {isAdmin && (
+                        <div className="relative group backup-menu-container">
+                            <button
+                                onClick={() => setShowBackupMenu(!showBackupMenu)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                title="Database Management"
+                            >
+                                <span className="material-icons-outlined text-gray-600 dark:text-gray-400">storage</span>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {showBackupMenu && (
+                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+                                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Database</p>
+                                    </div>
+                                    <div className="p-2">
+                                        <button
+                                            onClick={() => { handleExportBackup(); setShowBackupMenu(false); }}
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm"
+                                        >
+                                            <span className="material-icons-outlined text-blue-600 text-base">download</span>
+                                            <span className="text-gray-700 dark:text-gray-300">Export JSON</span>
+                                        </button>
+                                        <button
+                                            onClick={() => { handleExportExcel(); setShowBackupMenu(false); }}
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm"
+                                        >
+                                            <span className="material-icons-outlined text-green-600 text-base">table_chart</span>
+                                            <span className="text-gray-700 dark:text-gray-300">Export Excel</span>
+                                        </button>
+                                        <label className="w-full">
+                                            <div className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex items-center gap-2 text-sm cursor-pointer">
+                                                <span className="material-icons-outlined text-orange-600 text-base">upload</span>
+                                                <span className="text-gray-700 dark:text-gray-300">Import JSON</span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept=".json"
+                                                onChange={(e) => { handleImportBackup(e); setShowBackupMenu(false); }}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    </div>
+                                    <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 px-2">Import replaces all data</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <Link href="/admin/users" className="text-primary hover:underline font-medium">
                         Manage Users
                     </Link>
@@ -174,43 +263,6 @@ export default function AdminDashboard() {
                     </Link>
                 </div>
             </header>
-
-            {/* Database Backup/Import Section - Only for Admins */}
-            {isAdmin && (
-                <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg p-6 border border-blue-200 dark:border-gray-700">
-                    <div className="flex items-center gap-3 mb-4">
-                        <span className="material-icons-outlined text-3xl text-blue-600 dark:text-blue-400">backup</span>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Database Management</h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Backup and restore your database</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4 flex-wrap">
-                        <button
-                            onClick={handleExportBackup}
-                            className="flex-1 min-w-[200px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
-                        >
-                            <span className="material-icons-outlined">download</span>
-                            Export Backup
-                        </button>
-                        <label className="flex-1 min-w-[200px]">
-                            <div className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
-                                <span className="material-icons-outlined">upload</span>
-                                Import Backup
-                            </div>
-                            <input
-                                type="file"
-                                accept=".json"
-                                onChange={handleImportBackup}
-                                className="hidden"
-                            />
-                        </label>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-                        ⚠️ Warning: Importing will replace all current data (except users). Make sure to export first!
-                    </p>
-                </div>
-            )}
 
             {/* Assigned Lines Section */}
             <div className="mb-12">
