@@ -58,9 +58,12 @@ export default function Dashboard() {
     const [lines, setLines] = useState<Line[]>([]);
     const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [dataLoaded, setDataLoaded] = useState(false);
 
     const handleLineSelect = useCallback((lineId: number) => {
         setSelectedLineId(lineId);
+        setLoading(true);
 
         if (lineId === -1) {
             // Global Dashboard
@@ -72,6 +75,8 @@ export default function Dashboard() {
                     // For global view, we might want to show summary cards instead of product details
                     // But for now, let's just reset selected products to avoid confusion
                     setSelectedProducts({});
+                    setLoading(false);
+                    setDataLoaded(true);
                 });
         } else {
             const line = lines.find(l => l.id === lineId);
@@ -98,6 +103,8 @@ export default function Dashboard() {
                     });
 
                     setSelectedProducts(prev => ({ ...prev, ...defaults }));
+                    setLoading(false);
+                    setDataLoaded(true);
                 });
         }
     }, [lines]);
@@ -172,6 +179,16 @@ export default function Dashboard() {
 
     return (
         <div className="p-2 sm:p-4 lg:p-8 max-w-[1800px] mx-auto" id="app">
+            {loading && !dataLoaded && (
+                <div className="fixed inset-0 bg-white/90 dark:bg-gray-900/90 z-50 flex items-center justify-center backdrop-blur-sm">
+                    <div className="text-center">
+                        <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-primary mb-4"></div>
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Loading Dashboard...</h2>
+                        <p className="text-gray-500 dark:text-gray-400">Please wait while we fetch your data</p>
+                    </div>
+                </div>
+            )}
+
             <LineDrawer
                 isOpen={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
