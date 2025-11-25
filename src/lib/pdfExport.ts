@@ -228,7 +228,7 @@ export async function exportAnalyticsToPDF(options: PDFExportOptions) {
 
 export function generateQuickPDF(title: string, content: string) {
     const pdf = new jsPDF();
-    const pageWidth = pdf.internal.pageSize.getWidth();
+    // const pageWidth = pdf.internal.pageSize.getWidth();
 
     // Header
     pdf.setFillColor(61, 205, 88);

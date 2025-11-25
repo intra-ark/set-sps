@@ -237,6 +237,7 @@ export default function AdminLinePage() {
                             {imageUrl && (
                                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Preview:</p>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src={imageUrl}
                                         alt="Header Preview"

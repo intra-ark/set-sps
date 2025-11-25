@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import Toast from '@/components/Toast';
+import Modal from '@/components/Modal';
 
 interface User {
     id: number;
@@ -47,16 +49,43 @@ export default function UsersPage() {
     const [roleChangeUsername, setRoleChangeUsername] = useState("");
     const [selectedRole, setSelectedRole] = useState<string>("");
 
-    // Toast Notification State
-    const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
-    const [toastType, setToastType] = useState<'success' | 'error'>('success');
+    // Toast State
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
+        message: '',
+        type: 'success',
+        visible: false
+    });
 
-    const showToastNotification = (message: string, type: 'success' | 'error' = 'success') => {
-        setToastMessage(message);
-        setToastType(type);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000); // 3 seconds
+    // Modal State
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: 'info' | 'warning' | 'danger';
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => { }
+    });
+
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type, visible: true });
+    };
+
+    const showConfirm = (title: string, message: string, onConfirm: () => void, type: 'info' | 'warning' | 'danger' = 'warning') => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            type,
+            onConfirm: () => {
+                onConfirm();
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     const isAdmin = session?.user?.role === 'ADMIN';
@@ -91,30 +120,39 @@ export default function UsersPage() {
                 setUsername("");
                 setPassword("");
                 fetchUsers();
-                alert("User added successfully");
+                showToast("User added successfully");
             } else {
                 const err = await res.json();
-                alert(err.error || "Failed to add user");
+                showToast(err.error || "Failed to add user", 'error');
             }
         } catch (error) {
             console.error(error);
+            showToast("An error occurred", 'error');
         }
     };
 
     const handleDeleteUser = async (id: number) => {
-        if (!confirm("Are you sure?")) return;
-        try {
-            const res = await fetch(`/api/users?id=${id}`, {
-                method: 'DELETE',
-            });
-            if (res.ok) {
-                fetchUsers();
-            } else {
-                alert("Failed to delete user");
-            }
-        } catch (error) {
-            console.error(error);
-        }
+        showConfirm(
+            'Delete User',
+            'Are you sure you want to delete this user?',
+            async () => {
+                try {
+                    const res = await fetch(`/api/users?id=${id}`, {
+                        method: 'DELETE',
+                    });
+                    if (res.ok) {
+                        fetchUsers();
+                        showToast("User deleted successfully");
+                    } else {
+                        showToast("Failed to delete user", 'error');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showToast("Error deleting user", 'error');
+                }
+            },
+            'danger'
+        );
     };
 
     const openResetModal = (id: number) => {
@@ -135,17 +173,17 @@ export default function UsersPage() {
             });
 
             if (res.ok) {
-                alert("Password updated successfully");
+                showToast("Password updated successfully");
                 setResetModalOpen(false);
                 setResetUserId(null);
                 setNewPassword("");
             } else {
                 const err = await res.json();
-                alert(err.error || "Failed to update password");
+                showToast(err.error || "Failed to update password", 'error');
             }
         } catch (error) {
             console.error(error);
-            alert("An error occurred");
+            showToast("An error occurred", 'error');
         }
     };
 
@@ -196,25 +234,25 @@ export default function UsersPage() {
             });
 
             if (res.ok) {
-                showToastNotification('Line assignments updated successfully!', 'success');
+                showToast('Line assignments updated successfully!', 'success');
                 setLineAssignModalOpen(false);
                 setAssignUserId(null);
                 setUserLines([]);
             } else {
                 const err = await res.json();
                 console.error('API Error:', err);
-                showToastNotification(`Failed: ${err.error || 'Unknown error'}`, 'error');
+                showToast(`Failed: ${err.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             console.error('Error saving line assignments:', error);
-            showToastNotification(`Error: ${error}`, 'error');
+            showToast(`Error: ${error}`, 'error');
         }
     };
 
     const openRoleChangeModal = (userId: number, currentRole: string, username: string) => {
         // Prevent changing Super Admin role
         if (username.toLowerCase() === 'ahmet mersin') {
-            showToastNotification('Cannot modify Super Admin role', 'error');
+            showToast('Cannot modify Super Admin role', 'error');
             return;
         }
 
@@ -235,7 +273,7 @@ export default function UsersPage() {
             });
 
             if (res.ok) {
-                showToastNotification(`Role updated to ${selectedRole} successfully!`, 'success');
+                showToast(`Role updated to ${selectedRole} successfully!`, 'success');
                 setRoleChangeModalOpen(false);
                 setRoleChangeUserId(null);
                 setRoleChangeUsername("");
@@ -243,11 +281,11 @@ export default function UsersPage() {
                 fetchUsers();
             } else {
                 const err = await res.json();
-                showToastNotification(`Failed: ${err.error || 'Unknown error'}`, 'error');
+                showToast(`Failed: ${err.error || 'Unknown error'}`, 'error');
             }
         } catch (error) {
             console.error('Error updating role:', error);
-            showToastNotification(`Error: ${error}`, 'error');
+            showToast(`Error: ${error}`, 'error');
         }
     };
 
@@ -255,6 +293,23 @@ export default function UsersPage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4">
+            {toast.visible && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+                />
+            )}
+
+            <Modal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
+
             <h1 className="text-2xl font-bold mb-8 text-gray-800 dark:text-white">User Management</h1>
 
             {isAdmin && (
@@ -528,21 +583,6 @@ export default function UsersPage() {
                                 Update Role
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Toast Notification */}
-            {showToast && (
-                <div className="fixed bottom-8 right-8 z-50 animate-fade-in">
-                    <div className={`px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 ${toastType === 'success'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-red-500 text-white'
-                        }`}>
-                        <span className="material-icons-outlined">
-                            {toastType === 'success' ? 'check_circle' : 'error'}
-                        </span>
-                        <span className="font-semibold">{toastMessage}</span>
                     </div>
                 </div>
             )}

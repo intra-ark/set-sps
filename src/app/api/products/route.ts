@@ -24,11 +24,8 @@ export async function GET(request: Request) {
             if (!hasAccess) {
                 return NextResponse.json({ error: 'Access denied to this line' }, { status: 403 });
             }
-        } else if (session.user.role !== 'ADMIN') {
-            // If no lineId provided, only ADMIN can see ALL products
-            // Regular users must filter by line
-            return NextResponse.json({ error: 'Line ID required for non-admins' }, { status: 403 });
         }
+        // If no lineId, allow all users to fetch all products (read-only for global dashboard)
 
         const where = lineId ? { lineId: parseInt(lineId) } : {};
         const products = await prisma.product.findMany({

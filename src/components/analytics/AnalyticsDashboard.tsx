@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import AIExecutiveSummary from './AIExecutiveSummary';
 import TrendChart from './TrendChart';
 import ComparisonChart from './ComparisonChart';
@@ -11,52 +11,100 @@ import {
     getTopProducts,
     getTimeBreakdownTrend,
     calculateAverageByYear,
-    Product,
-    YearData
+    Product
 } from '@/lib/analytics';
 import { exportAnalyticsToPDF } from '@/lib/pdfExport';
 
-interface AnalyticsDashboardProps {
-    products: Product[];
+interface Line {
+    id: number;
+    name: string;
+    slug: string;
 }
 
-export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps) {
+interface AnalyticsDashboardProps {
+    products: Product[];
+    initialLineId?: number | null;
+}
+
+export default function AnalyticsDashboard({ products, initialLineId }: AnalyticsDashboardProps) {
+    const [lines, setLines] = useState<Line[]>([]);
+    const [selectedLineId, setSelectedLineId] = useState<number | null>(initialLineId ?? null); // null means "All Lines"
+    const [selectedProductId, setSelectedProductId] = useState<number | null>(null); // null means "All Products"
+
+    // Fetch available lines
+    useEffect(() => {
+        fetch('/api/lines')
+            .then(res => res.json())
+            .then((data: Line[]) => {
+                if (Array.isArray(data)) {
+                    setLines(data);
+                }
+            })
+            .catch(err => console.error('Error fetching lines:', err));
+    }, []);
+
+    // Filter products by selected line
+    const lineFilteredProducts = useMemo(() => {
+        if (selectedLineId === null) {
+            return products; // Show all products
+        }
+        return products.filter(p => p.lineId === selectedLineId);
+    }, [products, selectedLineId]);
+
+    // Get available products for the product selector (based on line filter)
+    const availableProducts = useMemo(() => {
+        return lineFilteredProducts;
+    }, [lineFilteredProducts]);
+
+    // Final filtered products (by line AND product)
+    const filteredProducts = useMemo(() => {
+        if (selectedProductId === null) {
+            return lineFilteredProducts; // Show all products in selected line
+        }
+        return lineFilteredProducts.filter(p => p.id === selectedProductId);
+    }, [lineFilteredProducts, selectedProductId]);
+
+    // Reset product selection when line changes
+    useEffect(() => {
+        setSelectedProductId(null);
+    }, [selectedLineId]);
+
     // Get available years first to set correct default
     const availableYears = useMemo(() => {
-        const years = products.flatMap(p => p.yearData.map(yd => yd.year));
+        const years = filteredProducts.flatMap(p => p.yearData.map(yd => yd.year));
         return [...new Set(years)].sort((a, b) => b - a);
-    }, [products]);
+    }, [filteredProducts]);
 
     const [selectedYear, setSelectedYear] = useState(availableYears[0] || 2025);
     const [isExporting, setIsExporting] = useState(false);
-    const [aiAnalysisText, setAiAnalysisText] = useState<string>("");
+    // const [aiAnalysisText, setAiAnalysisText] = useState<string>("");
 
     // Calculate KPIs
     const avgSPS = useMemo(() =>
-        calculateAverageByYear(products, 'kd', selectedYear),
-        [products, selectedYear]
+        calculateAverageByYear(filteredProducts, 'kd', selectedYear),
+        [filteredProducts, selectedYear]
     );
 
     const avgCycleTime = useMemo(() =>
-        calculateAverageByYear(products, 'dt', selectedYear),
-        [products, selectedYear]
+        calculateAverageByYear(filteredProducts, 'dt', selectedYear),
+        [filteredProducts, selectedYear]
     );
 
     const avgUptime = useMemo(() =>
-        calculateAverageByYear(products, 'ut', selectedYear),
-        [products, selectedYear]
+        calculateAverageByYear(filteredProducts, 'ut', selectedYear),
+        [filteredProducts, selectedYear]
     );
 
     const avgNVA = useMemo(() =>
-        calculateAverageByYear(products, 'nva', selectedYear),
-        [products, selectedYear]
+        calculateAverageByYear(filteredProducts, 'nva', selectedYear),
+        [filteredProducts, selectedYear]
     );
 
     // Calculate trends
-    const spsTrend = useMemo(() => getMetricTrend(products, 'kd'), [products]);
-    const cycleTimeTrend = useMemo(() => getMetricTrend(products, 'dt'), [products]);
-    const uptimeTrend = useMemo(() => getMetricTrend(products, 'ut'), [products]);
-    const nvaTrend = useMemo(() => getMetricTrend(products, 'nva'), [products]);
+    const spsTrend = useMemo(() => getMetricTrend(filteredProducts, 'kd'), [filteredProducts]);
+    const cycleTimeTrend = useMemo(() => getMetricTrend(filteredProducts, 'dt'), [filteredProducts]);
+    const uptimeTrend = useMemo(() => getMetricTrend(filteredProducts, 'ut'), [filteredProducts]);
+    const nvaTrend = useMemo(() => getMetricTrend(filteredProducts, 'nva'), [filteredProducts]);
 
     // Calculate trend direction for AI
     const { trendDirection, trendPercentage } = useMemo(() => {
@@ -77,14 +125,14 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
 
     // Get top products by SPS
     const topProducts = useMemo(() =>
-        getTopProducts(products, 'kd', selectedYear, 10),
-        [products, selectedYear]
+        getTopProducts(filteredProducts, 'kd', selectedYear, 10),
+        [filteredProducts, selectedYear]
     );
 
     // Time breakdown
     const timeBreakdown = useMemo(() =>
-        getTimeBreakdownTrend(products),
-        [products]
+        getTimeBreakdownTrend(filteredProducts),
+        [filteredProducts]
     );
 
     // Export handler
@@ -110,10 +158,15 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
         }
     };
 
-    if (products.length === 0) {
+    if (filteredProducts.length === 0) {
         return (
             <div className="p-8">
-                <p className="text-center text-gray-500">No data available for analytics</p>
+                <p className="text-center text-gray-500">
+                    {selectedLineId === null
+                        ? 'No data available for analytics'
+                        : `No data available for ${lines.find(l => l.id === selectedLineId)?.name || 'selected line'}`
+                    }
+                </p>
             </div>
         );
     }
@@ -122,18 +175,46 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
         <div className="space-y-6">
             {/* Header with Controls */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                        📊 Manufacturing Analytics
-                    </h2>
-                    <div className="flex gap-4">
+                <div className="flex flex-col gap-4 mb-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                            📊 Manufacturing Analytics
+                            {selectedLineId !== null && (
+                                <span className="ml-3 text-lg font-normal text-primary">
+                                    • {lines.find(l => l.id === selectedLineId)?.name || 'Unknown Line'}
+                                </span>
+                            )}
+                        </h2>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        <select
+                            value={selectedLineId ?? ''}
+                            onChange={(e) => setSelectedLineId(e.target.value ? Number(e.target.value) : null)}
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium shadow-sm hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        >
+                            <option value="">🌍 All Lines</option>
+                            {lines.map(line => (
+                                <option key={line.id} value={line.id}>🏭 {line.name}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={selectedProductId ?? ''}
+                            onChange={(e) => setSelectedProductId(e.target.value ? Number(e.target.value) : null)}
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium shadow-sm hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                            disabled={availableProducts.length === 0}
+                        >
+                            <option value="">📦 All Products</option>
+                            {availableProducts.map(product => (
+                                <option key={product.id} value={product.id}>🔧 {product.name}</option>
+                            ))}
+                        </select>
                         <select
                             value={selectedYear}
                             onChange={(e) => setSelectedYear(Number(e.target.value))}
-                            className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium shadow-sm hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                         >
                             {availableYears.map(year => (
-                                <option key={year} value={year}>{year}</option>
+                                <option key={year} value={year}>📅 {year}</option>
                             ))}
                         </select>
                         <button
@@ -165,7 +246,7 @@ export default function AnalyticsDashboard({ products }: AnalyticsDashboardProps
                     trendDirection={trendDirection}
                     trendPercentage={trendPercentage}
                     selectedYear={selectedYear}
-                    onAnalysisUpdate={setAiAnalysisText}
+                    onAnalysisUpdate={() => { }} // No-op since we don't store it
                 />
             </div>
 

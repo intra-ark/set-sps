@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import Toast from '@/components/Toast';
+import Modal from '@/components/Modal';
 
 interface Line {
     id: number;
@@ -23,6 +25,45 @@ export default function AdminDashboard() {
     const [showYearModal, setShowYearModal] = useState(false);
     const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [newYearInput, setNewYearInput] = useState('');
+
+    // Toast State
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
+        message: '',
+        type: 'success',
+        visible: false
+    });
+
+    // Modal State
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: 'info' | 'warning' | 'danger';
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => { }
+    });
+
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type, visible: true });
+    };
+
+    const showConfirm = (title: string, message: string, onConfirm: () => void, type: 'info' | 'warning' | 'danger' = 'warning') => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            type,
+            onConfirm: () => {
+                onConfirm();
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
 
     const isAdmin = session?.user?.role === 'ADMIN';
 
@@ -90,42 +131,48 @@ export default function AdminDashboard() {
                 const updated = await res.json();
                 setAvailableYears(updated);
                 setNewYearInput('');
-                alert('Year added successfully!');
+                showToast('Year added successfully!');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to add year');
+                showToast(error.error || 'Failed to add year', 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error adding year');
+            showToast('Error adding year', 'error');
         }
     };
 
     const handleDeleteYear = async (year: number) => {
-        if (!confirm(`Are you sure you want to delete year ${year}? This will NOT delete the data associated with it, but it will hide it from selection.`)) return;
+        showConfirm(
+            'Delete Year',
+            `Are you sure you want to delete year ${year}? This will NOT delete the data associated with it, but it will hide it from selection.`,
+            async () => {
+                try {
+                    const res = await fetch('/api/settings/years', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ year })
+                    });
 
-        try {
-            const res = await fetch('/api/settings/years', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ year })
-            });
-
-            if (res.ok) {
-                const updated = await res.json();
-                setAvailableYears(updated);
-            } else {
-                alert('Failed to delete year');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Error deleting year');
-        }
+                    if (res.ok) {
+                        const updated = await res.json();
+                        setAvailableYears(updated);
+                        showToast(`Year ${year} deleted successfully`);
+                    } else {
+                        showToast('Failed to delete year', 'error');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showToast('Error deleting year', 'error');
+                }
+            },
+            'warning'
+        );
     };
 
     const handleCreateLine = async () => {
         if (!newLineName.trim() || !newLineSlug.trim()) {
-            alert('Please enter both name and slug');
+            showToast('Please enter both name and slug', 'error');
             return;
         }
 
@@ -145,38 +192,42 @@ export default function AdminDashboard() {
                 setNewLineName('');
                 setNewLineSlug('');
                 fetchLines();
+                showToast('Line created successfully!');
             } else {
                 const error = await response.json();
-                alert(`Failed to create line: ${error.error}`);
+                showToast(`Failed to create line: ${error.error}`, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error creating line');
+            showToast('Error creating line', 'error');
         } finally {
             setCreating(false);
         }
     };
 
     const handleDeleteLine = async (lineId: number, lineName: string) => {
-        if (!confirm(`Are you sure you want to delete "${lineName}"? This will also delete all associated products and data.`)) {
-            return;
-        }
+        showConfirm(
+            'Delete Line',
+            `Are you sure you want to delete "${lineName}"? This will also delete all associated products and data.`,
+            async () => {
+                try {
+                    const response = await fetch(`/api/lines/${lineId}`, {
+                        method: 'DELETE'
+                    });
 
-        try {
-            const response = await fetch(`/api/lines/${lineId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                alert(`Line "${lineName}" deleted successfully! Please refresh the homepage if needed.`);
-                fetchLines(); // Refresh lines list
-            } else {
-                alert('Failed to delete line');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Error deleting line');
-        }
+                    if (response.ok) {
+                        showToast(`Line "${lineName}" deleted successfully!`, 'success');
+                        fetchLines(); // Refresh lines list
+                    } else {
+                        showToast('Failed to delete line', 'error');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showToast('Error deleting line', 'error');
+                }
+            },
+            'danger'
+        );
     };
 
     const handleExportBackup = async () => {
@@ -196,10 +247,10 @@ export default function AdminDashboard() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
-            alert('Backup exported successfully!');
+            showToast('Backup exported successfully!');
         } catch (error) {
             console.error(error);
-            alert('Failed to export backup');
+            showToast('Failed to export backup', 'error');
         }
     };
 
@@ -220,10 +271,10 @@ export default function AdminDashboard() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
-            alert('Excel exported successfully!');
+            showToast('Excel exported successfully!');
         } catch (error) {
             console.error(error);
-            alert('Failed to export Excel');
+            showToast('Failed to export Excel', 'error');
         }
     };
 
@@ -231,37 +282,39 @@ export default function AdminDashboard() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (!confirm('⚠️ This will replace ALL current data (except users). Are you sure you want to continue?')) {
-            e.target.value = '';
-            return;
-        }
+        showConfirm(
+            'Import Backup',
+            '⚠️ This will replace ALL current data (except users). Are you sure you want to continue?',
+            async () => {
+                try {
+                    const text = await file.text();
+                    const backup = JSON.parse(text);
 
-        try {
-            const text = await file.text();
-            const backup = JSON.parse(text);
+                    const response = await fetch('/api/backup/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(backup),
+                    });
 
-            const response = await fetch('/api/backup/import', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(backup),
-            });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.details || 'Failed to import backup');
+                    }
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.details || 'Failed to import backup');
-            }
+                    const result = await response.json();
+                    showToast(`Backup imported successfully! Lines: ${result.importedCounts.lines}, Products: ${result.importedCounts.products}`, 'success');
 
-            const result = await response.json();
-            alert(`Backup imported successfully!\n\nImported:\n- Lines: ${result.importedCounts.lines}\n- Products: ${result.importedCounts.products}\n- Year Data: ${result.importedCounts.yearData}\n- User Lines: ${result.importedCounts.userLines}`);
-
-            // Refresh the page to show updated data
-            window.location.reload();
-        } catch (error) {
-            console.error(error);
-            alert(`Failed to import backup: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-            e.target.value = '';
-        }
+                    // Refresh the page to show updated data
+                    setTimeout(() => window.location.reload(), 2000);
+                } catch (error) {
+                    console.error(error);
+                    showToast(`Failed to import backup: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                } finally {
+                    e.target.value = '';
+                }
+            },
+            'danger'
+        );
     };
 
     if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -272,6 +325,23 @@ export default function AdminDashboard() {
 
     return (
         <div className="p-8 max-w-6xl mx-auto">
+            {toast.visible && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+                />
+            )}
+
+            <Modal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
+
             {/* Schneider Electric Branding Header */}
             <div className="mb-8 text-center">
                 <div className="flex items-center justify-center gap-3 mb-2">

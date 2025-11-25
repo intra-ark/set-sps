@@ -33,6 +33,7 @@ export default function LineYearManagement() {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
+    const [lineName, setLineName] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
     const [showAddProduct, setShowAddProduct] = useState(false);
@@ -40,6 +41,13 @@ export default function LineYearManagement() {
 
     const fetchProducts = useCallback(async () => {
         try {
+            // Fetch line name
+            const lineRes = await fetch(`/api/lines/${lineId}`);
+            if (lineRes.ok) {
+                const lineData = await lineRes.json();
+                setLineName(lineData.name);
+            }
+
             const res = await fetch(`/api/products?lineId=${lineId}`);
             const data = await res.json();
             setAllProducts(data);
@@ -222,7 +230,7 @@ export default function LineYearManagement() {
                                 // Security: Validate file type
                                 const validTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
                                 if (!validTypes.includes(file.type) && !file.name.endsWith('.csv')) {
-                                    alert('Invalid file type. Please upload a CSV file only.');
+                                    showToast('Invalid file type. Please upload a CSV file only.', 'error');
                                     e.target.value = '';
                                     return;
                                 }
@@ -230,7 +238,7 @@ export default function LineYearManagement() {
                                 // Security: Validate file size (max 5MB)
                                 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
                                 if (file.size > MAX_FILE_SIZE) {
-                                    alert('File too large. Maximum size is 5MB.');
+                                    showToast('File too large. Maximum size is 5MB.', 'error');
                                     e.target.value = '';
                                     return;
                                 }
@@ -242,7 +250,7 @@ export default function LineYearManagement() {
 
                                         // Security: Check for suspiciously large content
                                         if (text.length > 10 * 1024 * 1024) { // 10MB
-                                            alert('File content too large.');
+                                            showToast('File content too large.', 'error');
                                             e.target.value = '';
                                             return;
                                         }
@@ -252,7 +260,7 @@ export default function LineYearManagement() {
 
                                         // Security: Limit number of rows
                                         if (lines.length > 101) { // Header + 100 rows
-                                            alert('Too many rows. Maximum 100 products per import.');
+                                            showToast('Too many rows. Maximum 100 products per import.', 'error');
                                             e.target.value = '';
                                             return;
                                         }
@@ -316,24 +324,27 @@ export default function LineYearManagement() {
                                                 const result = await res.json();
                                                 if (res.ok) {
                                                     const message = result.errors
-                                                        ? `Imported ${result.success} rows. ${result.failed} failed:\n${result.errors.join('\n')}`
+                                                        ? `Imported ${result.success} rows, ${result.failed} failed. Check console for details.`
                                                         : `Successfully imported ${result.success} rows!`;
-                                                    alert(message);
+                                                    showToast(message, result.errors ? 'error' : 'success');
+                                                    if (result.errors) {
+                                                        console.error('Import errors:', result.errors);
+                                                    }
                                                     fetchProducts();
                                                 } else {
                                                     console.error('Server Error:', result);
-                                                    alert(`Failed to import data: ${result.error || 'Unknown error'}`);
+                                                    showToast(`Failed to import: ${result.error || 'Unknown error'}`, 'error');
                                                 }
                                             } catch (err) {
                                                 console.error('Fetch Error:', err);
-                                                alert('Error during import. Check console for details.');
+                                                showToast('Error during import. Check console for details.', 'error');
                                             }
                                         } else {
-                                            alert('No valid data found in CSV. Check console for details.');
+                                            showToast('No valid data found in CSV. Check console for details.', 'error');
                                         }
                                     } catch (parseError) {
                                         console.error('CSV Parse Error:', parseError);
-                                        alert('Failed to parse CSV file. Please check the format.');
+                                        showToast('Failed to parse CSV file. Please check the format.', 'error');
                                     }
 
                                     // Reset input
@@ -360,7 +371,7 @@ export default function LineYearManagement() {
                             const url = URL.createObjectURL(blob);
                             const link = document.createElement('a');
                             link.setAttribute('href', url);
-                            link.setAttribute('download', `Line_${lineId}_Data_${year}.csv`);
+                            link.setAttribute('download', `${lineName || 'Line'}_YearData_${year}.csv`);
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
