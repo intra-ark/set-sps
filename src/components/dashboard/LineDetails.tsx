@@ -16,7 +16,7 @@ export default function LineDetails({ line, products, onBack }: LineDetailsProps
         '2026': '',
         '2027': '',
     });
-    const [selectedChartYear, setSelectedChartYear] = useState('2025');
+    const [selectedYear, setSelectedYear] = useState('2023');
     const [headerImage, setHeaderImage] = useState('/schneider_f400_diagram.png');
 
     // Initialize defaults when products change
@@ -95,8 +95,8 @@ export default function LineDetails({ line, products, onBack }: LineDetailsProps
                             {['2023', '2024', '2025', '2026', '2027'].map(year => (
                                 <button
                                     key={year}
-                                    onClick={() => setSelectedChartYear(year)}
-                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${selectedChartYear === year
+                                    onClick={() => setSelectedYear(year)}
+                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${selectedYear === year
                                         ? 'bg-primary text-white shadow-md'
                                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                         }`}
@@ -116,12 +116,12 @@ export default function LineDetails({ line, products, onBack }: LineDetailsProps
                                     Cubicle Types:
                                 </label>
                                 <select
-                                    value={selectedProducts[selectedChartYear] || ''}
-                                    onChange={(e) => handleProductChange(selectedChartYear, e.target.value)}
+                                    value={selectedProducts[selectedYear] || ''}
+                                    onChange={(e) => handleProductChange(selectedYear, e.target.value)}
                                     className="w-full bg-primary/10 border border-primary/20 text-center rounded-lg px-4 py-3 font-semibold text-gray-800 dark:text-white transition"
                                 >
                                     <option value="" disabled>Ürün Seçiniz...</option>
-                                    {products.filter(p => p.yearData.some(d => d.year === parseInt(selectedChartYear))).map(p => (
+                                    {products.filter(p => p.yearData.some(d => d.year === parseInt(selectedYear))).map(p => (
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                     ))}
                                 </select>
@@ -129,7 +129,7 @@ export default function LineDetails({ line, products, onBack }: LineDetailsProps
 
                             {/* Data Rows */}
                             {(() => {
-                                const data = getProductData(selectedChartYear);
+                                const data = getProductData(selectedYear);
                                 return (
                                     <>
                                         <div className="bg-white/50 dark:bg-black/20 rounded-lg px-4 py-3 flex justify-between items-center">
@@ -181,11 +181,11 @@ export default function LineDetails({ line, products, onBack }: LineDetailsProps
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                                 <span className="material-icons-outlined text-primary">bar_chart</span>
-                                SPS Time Analysis
+                                SPS Time Analysis ({selectedYear})
                             </h3>
                             <div className="text-sm text-gray-600 dark:text-gray-400 bg-white/50 dark:bg-black/20 px-4 py-2 rounded-lg border border-white/50">
                                 <span className="font-bold text-gray-800 dark:text-gray-200">
-                                    {products.find(p => p.id.toString() === selectedProducts[selectedChartYear])?.name || 'No Product Selected'}
+                                    {products.find(p => p.id.toString() === selectedProducts[selectedYear])?.name || 'No Product Selected'}
                                 </span>
                             </div>
                         </div>
@@ -193,10 +193,10 @@ export default function LineDetails({ line, products, onBack }: LineDetailsProps
                         {/* Waterfall Chart - Full Height */}
                         <div className="flex-1 bg-white/40 dark:bg-black/20 rounded-xl p-6 border border-white/50 min-h-[600px]">
                             <WaterfallChart
-                                ot={getProductData(selectedChartYear)?.otr ?? null}
-                                dt={getProductData(selectedChartYear)?.dt ?? null}
-                                ut={getProductData(selectedChartYear)?.ut ?? null}
-                                nva={getProductData(selectedChartYear)?.nva ?? null}
+                                ot={getProductData(selectedYear)?.otr ?? null}
+                                dt={getProductData(selectedYear)?.dt ?? null}
+                                ut={getProductData(selectedYear)?.ut ?? null}
+                                nva={getProductData(selectedYear)?.nva ?? null}
                             />
                         </div>
                     </div>
